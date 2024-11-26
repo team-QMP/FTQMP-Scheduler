@@ -14,13 +14,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache rust registery
+      uses: Swatinem/rust-cache@v2
 
     - name: Build test
       run: cargo build --release --verbose
