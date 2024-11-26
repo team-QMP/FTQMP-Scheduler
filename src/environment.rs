@@ -31,7 +31,7 @@ mod test {
     use std::collections::HashSet;
 
     use crate::environment::Environment;
-    use crate::ds::polycube::{Coorinate, Polycube};
+    use crate::ds::polycube::{Coordinate, Polycube};
 
     #[test]
     fn test_environment_add_polycube() {
