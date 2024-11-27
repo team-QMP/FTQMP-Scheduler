@@ -4,12 +4,14 @@ use crate::ds::polycube::{Coordinate, Polycube};
 #[derive(Debug, Clone)]
 pub struct Environment {
     blocks: HashSet<Coordinate>,
+    job_que: Vec<Polycube>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Self {
             blocks: HashSet::new(),
+            job_que: Vec::new(),
         }
     }
 
@@ -19,6 +21,9 @@ impl Environment {
             self.blocks.extend(p.blocks().clone());
         }
         !is_collide
+    }
+
+    pub fn add_job(&mut self, p: &Polycube) -> bool {
     }
 
     pub fn blocks(&self) -> &HashSet<Coordinate> {
