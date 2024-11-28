@@ -7,7 +7,7 @@ use kiss3d::light::Light;
 use crate::ds::polycube::Polycube;
 
 #[allow(dead_code)]
-fn visualize(polycube: &Polycube) {
+pub fn visualize(polycube: &Polycube) {
     let mut window = Window::new("Block Visualize");
     let scale: f32 = 0.1;
     let margin: f32 = 0.1;
