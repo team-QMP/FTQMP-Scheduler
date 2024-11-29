@@ -1,4 +1,4 @@
-extern crate kiss3d;
+// extern crate kiss3d;
 
 use qmp_scheduler::visualizer;
 use qmp_scheduler::ds::polycube::Polycube;
@@ -44,7 +44,7 @@ fn create_test_polyblock() -> (Polycube, Vec<Schedule>) {
     ];
     // 移動量、回転量、反転を定義する
     let cube_settings: Vec<Schedule> = vec![
-        Schedule{x: 3, y: 2, z: 1, rotate: 0, flip: false},
+        Schedule{x: 3, y: 2, z: 1, rotate: 2, flip: false},
     ];
     for i in 0..pos_candidate_list.len(){
         let pos = &pos_candidate_list[i];
