@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
+use std::time::Instant;
 use anyhow::Result;
 
+use crate::config::SimulationConfig;
 use crate::scheduler::Scheduler;
 use crate::ds::polycube::{Coordinate, Polycube};
 use crate::environment::Environment;
@@ -27,21 +29,23 @@ impl Job {
 }
 
 struct Simulator {
+    config: SimulationConfig,
     env: Environment,
     generator: Box<dyn ProgramGenerator>,
     scheduler: Box<dyn Scheduler>,
-    current_time: u32, // TODO: cycle?
+    current_cycle: u128, // TODO: time (e.g., ns)?
     job_que: BTreeMap<u32, Polycube>,
     job_counter: u32,
 }
 
 impl Simulator {
-    pub fn new(generator: Box<dyn ProgramGenerator>, scheduler: Box<dyn Scheduler>) -> Self {
+    pub fn new(config: SimulationConfig, generator: Box<dyn ProgramGenerator>, scheduler: Box<dyn Scheduler>) -> Self {
         Self {
+            config,
             env: Environment::new(),
             generator,
             scheduler,
-            current_time: 0,
+            current_cycle: 0,
             job_que: BTreeMap::new(),
             job_counter: 0,
         }
@@ -55,7 +59,22 @@ impl Simulator {
             self.job_que.insert(job_id, prog);
         }
 
-        // TODO
+        while self.job_que.len() != 0 {
+            // TODO: Notify added programs to scheduler
+            // ...
+
+            // TODO: How to estimate the execution time of the scheduler?
+            let start = Instant::now();
+            let issued_programs = self.scheduler.run();
+            let elapsed = start.elapsed().as_micros();
+            let elapsed_cycles = (elapsed + self.config.micro_sec_per_cycle - 1) / self.config.micro_sec_per_cycle;
+
+            // TODO: Remove issued programs from the job queue
+
+            self.current_cycle += elapsed_cycles;
+        }
+
+        // TODO: return simulation result
         unimplemented!()
     }
 
