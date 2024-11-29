@@ -23,14 +23,44 @@ fn create_basis_polyblock() -> Polycube{
     return poly_cube;
 }
 
+fn create_test_polyblock() -> Polycube{
+    let mut poly_cube = Polycube::new(vec![Coordinate::new(0, 0, 0)]);
+    let pos_candidate_list: Vec<Coordinate> = vec![
+        Coordinate{x: 0, y: 1, z: 0},
+        Coordinate{x: 0, y: 2, z: 0},
+        Coordinate{x: 0, y: 3, z: 0},
+        Coordinate{x: 0, y: 4, z: 0},
+        Coordinate{x: 0, y: 5, z: 0},
+        Coordinate{x: 0, y: 6, z: 0},
+        Coordinate{x: 0, y: 7, z: 0},
+        Coordinate{x: 0, y: 0, z: 1},
+        Coordinate{x: 0, y: 2, z: 1},
+        Coordinate{x: 0, y: 4, z: 1},
+        Coordinate{x: 0, y: 4, z: 2},
+        Coordinate{x: 0, y: 6, z: 1},
+        Coordinate{x: 0, y: 6, z: 2},
+        Coordinate{x: 0, y: 6, z: 3},
+    ];
+    // 移動量、回転量、反転を定義する
+    for i in 0..pos_candidate_list.len(){
+        let pos = &pos_candidate_list[i];
+        println!("{:?}", pos);
+        poly_cube.add_block(pos.clone());
+    }
+    println!("{:?}", poly_cube);
+    return poly_cube;
+}
+
 fn main() {
     println!("Hello, world!");
 
     // まずは複数のブロックを組み合わせてポリキューブを作る
     // ランダムだとテトリスできなくて困るので、固定でポリキューブのセットを作る
     // 原点もよくわからないので、原点用のポリキューブをまず作る。
-    let basis_blocks = create_basis_polyblock();
-    visualizer::visualize(&basis_blocks);
+    let basis_polycube = create_basis_polyblock();
+    let test_polycube = create_test_polyblock();
+    let polycubes: Vec<Polycube> = vec![basis_polycube, test_polycube];
+    visualizer::render_cubes(&polycubes);
 
     // 任意の形状のポリキューブを作る
 

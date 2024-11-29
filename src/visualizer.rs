@@ -21,3 +21,31 @@ pub fn visualize(polycube: &Polycube) {
     window.set_light(Light::StickToCamera);
     while window.render(){ }
 }
+
+
+#[allow(dead_code)]
+pub fn render_cubes(polycubes: &Vec<Polycube>) {
+    println!("render cubes");
+    let mut window = Window::new("Block Visualize");
+    let scale: f32 = 0.1;
+    let margin: f32 = 0.1;
+    let basis_polycube = polycubes[0].clone();
+    for pos in basis_polycube.blocks() {
+        let mut c = window.add_cube(scale*(1.-margin),scale*(1.-margin),scale*(1.-margin));
+        c.append_translation(&Translation3::new((pos.x as f32)*scale, (pos.y as f32)*scale,(pos.z as f32)*scale));
+        if pos.x == 0 && pos.y == 0 && pos.z == 0 {
+            c.set_color(1., 0., 0., );
+        }
+    }
+
+    for i in 1..polycubes.len() {
+        let polycube = &polycubes[i];
+        for pos in polycube.blocks() {
+            let mut c = window.add_cube(scale*(1.-margin),scale*(1.-margin),scale*(1.-margin));
+            c.append_translation(&Translation3::new((pos.x as f32)*scale+0.3, (pos.y as f32)*scale,(pos.z as f32)*scale));
+            c.set_color(0., 1., 0., );
+        }
+    }
+    window.set_light(Light::StickToCamera);
+    while window.render(){ }
+}
