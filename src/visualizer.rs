@@ -48,7 +48,12 @@ pub fn render_cubes(polycubes: &Vec<Polycube>, cube_settings: &Vec<Schedule>) {
             let angle = (schedule.rotate as f32)*std::f32::consts::PI/2.;
             let axis = Vector3::y_axis();
             let rotation = UnitQuaternion::from_axis_angle(&axis, angle);
-            c.append_translation(&Translation3::new((pos.x as f32)*scale, (pos.y as f32)*scale,(pos.z as f32)*scale));
+            // XZ平面というか、ここではYZ平面で鏡面対称
+            if schedule.flip {
+                c.append_translation(&Translation3::new((pos.x as f32)*scale*(-1.), (pos.y as f32)*scale,(pos.z as f32)*scale));
+            } else {
+                c.append_translation(&Translation3::new((pos.x as f32)*scale, (pos.y as f32)*scale,(pos.z as f32)*scale));
+            }
             c.append_rotation(&rotation);
             c.append_translation(&Translation3::new((schedule.x as f32)*scale, (schedule.y as f32)*scale,(schedule.z as f32)*scale));
             c.set_color(0., 1., 0., );

@@ -41,10 +41,11 @@ fn create_test_polyblock() -> (Polycube, Vec<Schedule>) {
         Coordinate{x: 0, y: 6, z: 1},
         Coordinate{x: 0, y: 6, z: 2},
         Coordinate{x: 0, y: 6, z: 3},
+        Coordinate{x: 1, y: 4, z: 0},
     ];
     // 移動量、回転量、反転を定義する
     let cube_settings: Vec<Schedule> = vec![
-        Schedule{x: 3, y: 2, z: 1, rotate: 2, flip: false},
+        Schedule{x: 3, y: 2, z: 1, rotate: 2, flip: true},
     ];
     for i in 0..pos_candidate_list.len(){
         let pos = &pos_candidate_list[i];
