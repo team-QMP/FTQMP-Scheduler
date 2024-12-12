@@ -1,4 +1,5 @@
 pub mod random_generator;
+pub mod test_generator;
 
 use crate::ds::polycube::Polycube;
 
