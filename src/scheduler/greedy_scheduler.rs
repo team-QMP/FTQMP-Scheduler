@@ -30,10 +30,10 @@ impl Scheduler for GreedyScheduler {
         let mut res = Vec::new();
         while self.program_list.len() != 0 {
             let (job_id, program) = self.program_list.pop_front().unwrap();
-            'top: for dx in 0..self.config.size_x {
-                for dy in 0..self.config.size_y {
-                    let mut dz = 0;
-                    loop {
+            let mut dz = 0;
+            'top: loop {
+                for dx in 0..self.config.size_x {
+                    for dy in 0..self.config.size_y {
                         for f in [0, 1] {
                             for rot in 0..3 {
                                 let schedule = Schedule::new(dx as i32, dy as i32, dz as i32, rot, f == 1);
@@ -44,9 +44,9 @@ impl Scheduler for GreedyScheduler {
                                 }
                             }
                         }
-                        dz += 1;
                     }
                 }
+                dz += 1;
             }
         }
 
