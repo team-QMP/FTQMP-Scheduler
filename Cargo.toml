@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 thiserror = "2"
+clap = { version = "4.5.23", features = ["derive"] }
 kiss3d = "0.32"
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
