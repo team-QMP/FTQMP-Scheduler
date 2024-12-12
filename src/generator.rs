@@ -3,5 +3,8 @@ pub mod random_generator;
 use crate::ds::polycube::Polycube;
 
 pub trait ProgramGenerator {
-    fn generate(&self, num: u32) -> Vec<Polycube>;
+    /// Generate all programs and the time.
+    fn generate(&self) -> Vec<(u128, Polycube)>;
+    /// Generate a program immediately.
+    fn generate_one(&self) -> Polycube;
 }
