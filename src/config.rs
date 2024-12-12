@@ -30,8 +30,8 @@ pub mod test {
     fn test_read_from_file() {
         let path = PathBuf::from("configs/test.json"); // TODO
         let config = SimulationConfig::from_json_file(path).unwrap();
-        assert!(config.size_x == 1);
-        assert!(config.size_y == 3);
+        assert!(config.size_x == 6);
+        assert!(config.size_y == 6);
         assert!(config.micro_sec_per_cycle == 100);
     }
 
