@@ -60,8 +60,8 @@ struct Simulator {
 impl Simulator {
     pub fn new(config: SimulationConfig, generator: Box<dyn ProgramGenerator>, scheduler: Box<dyn Scheduler>) -> Self {
         Self {
+            env: Environment::new(config.size_x as i32, config.size_y as i32),
             config,
-            env: Environment::new(),
             generator,
             scheduler,
             current_cycle: 0,
