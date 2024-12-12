@@ -11,7 +11,7 @@ pub struct Coordinate {
 }
 
 /// TODO: rotate
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Polycube {
     blocks: Vec<Coordinate>,
 }
