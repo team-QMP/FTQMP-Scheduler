@@ -1,6 +1,8 @@
 pub mod random_generator;
 pub mod test_generator;
 
+pub use test_generator::TestGenerator;
+
 use crate::ds::polycube::Polycube;
 
 pub trait ProgramGenerator {

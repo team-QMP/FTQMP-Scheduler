@@ -3,6 +3,12 @@ use crate::ds::polycube::Polycube;
 
 pub struct TestGenerator;
 
+impl TestGenerator {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl ProgramGenerator for TestGenerator {
     fn generate(&self) -> Vec<(u128, Polycube)> {
         let prog_num = 5;

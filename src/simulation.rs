@@ -6,12 +6,12 @@ use anyhow::Result;
 use crate::config::SimulationConfig;
 use crate::error::QMPError;
 use crate::scheduler::{apply_schedule, Scheduler};
-use crate::ds::polycube::{Coordinate, Polycube};
+use crate::ds::polycube::Polycube;
 use crate::environment::Environment;
 use crate::generator::ProgramGenerator;
 
 #[derive(Debug, Clone)]
-struct SimulationResult {
+pub struct SimulationResult {
     programs: Vec<Polycube>
 }
 
@@ -46,7 +46,7 @@ impl PartialOrd for Job {
     }
 }
 
-struct Simulator {
+pub struct Simulator {
     config: SimulationConfig,
     env: Environment,
     generator: Box<dyn ProgramGenerator>,
@@ -74,12 +74,15 @@ impl Simulator {
     pub fn run(&mut self) -> Result<SimulationResult> {
         for (t, program) in self.generator.generate() {
             let job_id = self.fresh_job_id();
-            self.job_que.insert(job_id, Job::new(job_id, t, program));
+            self.job_que.insert(job_id, Job::new(job_id, t, program.clone()));
+            self.future_job_que.push(Job::new(job_id, t, program));
         }
 
-        while self.job_que.len() != 0 {
+        let mut result = Vec::new(); // TODO
+
+        while self.job_que.len() != 0 && self.future_job_que.len() != 0 {
             while self.future_job_que.len() != 0
-                && self.future_job_que.peek().unwrap().added_time < self.current_cycle
+                && self.future_job_que.peek().unwrap().added_time <= self.current_cycle
             {
                 let job = self.future_job_que.pop().unwrap();
                 self.scheduler.add_job(job.id, job.program);
@@ -99,14 +102,16 @@ impl Simulator {
                 if !self.env.add_polycube(&scheduled_program) {
                     return Err(QMPError::invalid_schedule_error(job_id, schedule))
                 }
+                result.push(scheduled_program);
                 self.job_que.remove(&job_id);
             }
 
             self.current_cycle += elapsed_cycles;
         }
 
-        // TODO: return simulation result
-        unimplemented!()
+        Ok(SimulationResult {
+            programs: result
+        })
     }
 
     fn fresh_job_id(&mut self) -> u32 {

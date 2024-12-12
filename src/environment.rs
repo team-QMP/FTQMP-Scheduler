@@ -3,7 +3,7 @@ use crate::ds::polycube::{Coordinate, Polycube};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    blocks: HashSet<Coordinate>,
+    blocks: HashSet<Coordinate>, // TODO
     max_x: i32,
     max_y: i32,
 }
