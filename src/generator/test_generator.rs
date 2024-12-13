@@ -1,4 +1,5 @@
 use crate::generator::ProgramGenerator;
+use crate::ds::program::{Program, ProgramFormat};
 use crate::ds::polycube::Polycube;
 
 pub struct TestGenerator;
@@ -10,9 +11,9 @@ impl TestGenerator {
 }
 
 impl ProgramGenerator for TestGenerator {
-    fn generate(&self) -> Vec<(u128, Polycube)> {
+    fn generate(&self) -> Vec<(u128, Program)> {
         let prog_num = 5;
-        let program = Polycube::from(&[
+        let format = ProgramFormat::Polycube(Polycube::from(&[
             (0, 0, 0),
             (0, 1, 0),
             (0, 2, 0),
@@ -37,11 +38,11 @@ impl ProgramGenerator for TestGenerator {
             (2, 0, 3),
             (2, 1, 3),
             (2, 2, 3)
-        ]);
-        (0..prog_num).map(|_| (0, program.clone())).collect()
+        ]));
+        (0..prog_num).map(|_| (0, Program::new(format.clone()))).collect()
     }
 
-    fn generate_one(&self) -> Polycube {
+    fn generate_one(&self) -> Program {
         unimplemented!()
     }
 }

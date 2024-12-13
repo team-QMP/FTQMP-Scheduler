@@ -3,6 +3,7 @@ pub mod greedy_scheduler;
 pub use greedy_scheduler::GreedyScheduler;
 
 use crate::simulation::JobID;
+use crate::ds::program::{Program, ProgramFormat};
 use crate::ds::polycube::{Polycube, Coordinate};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,12 +28,14 @@ impl Schedule {
 }
 
 /// Note: flip -> rotate -> (adjust coordinates) -> shift
-pub fn apply_schedule(program: &Polycube, schedule: &Schedule) -> Polycube {
+/// Support polycube format only.
+pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
     assert!(0 <= schedule.rotate && schedule.rotate < 3);
+    let polycube = program.polycube().unwrap(); // TODO: error handling
     let mut blocks = Vec::new();
     let mut min_x = i32::MAX;
     let mut min_y = i32::MAX;
-    for block in program.blocks() {
+    for block in polycube.blocks() {
         let (x, y) = if schedule.flip {
             (-block.x, block.y)
         } else {
@@ -55,26 +58,28 @@ pub fn apply_schedule(program: &Polycube, schedule: &Schedule) -> Polycube {
                 coord.y - min_y + schedule.y,
                 coord.z + schedule.z))
         .collect();
-    Polycube::new(blocks)
+    Program::new(ProgramFormat::Polycube(Polycube::new(blocks)))
 }
 
 pub trait Scheduler {
-    fn add_job(&mut self, job_id: JobID, program: Polycube);
+    fn add_job(&mut self, job_id: JobID, program: Program);
     fn run(&mut self) -> Vec<(JobID, Schedule)>;
 }
 
 
 #[cfg(test)]
 mod test {
+    use crate::ds::program::{Program, ProgramFormat};
     use crate::ds::polycube::{Coordinate, Polycube};
     use crate::scheduler::{Schedule, apply_schedule};
 
     #[test]
     fn test_apply_schedule() {
-        let p = Polycube::new(vec![Coordinate::new(2, 1, 0), Coordinate::new(1, 2, 0)]);
+        let p = Program::new(ProgramFormat::Polycube(Polycube::new(vec![Coordinate::new(2, 1, 0), Coordinate::new(1, 2, 0)])));
         let s = Schedule::new(1, 10, 3, 1, true);
-        let actual = apply_schedule(&p, &s);
+        let scheduled = apply_schedule(&p, &s);
+        let actual = scheduled.polycube().unwrap();
         let expected = Polycube::new(vec![Coordinate::new(2, 10, 3), Coordinate::new(1, 11, 3)]);
-        assert_eq!(actual, expected);
+        assert_eq!(*actual, expected);
     }
 }

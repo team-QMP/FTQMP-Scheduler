@@ -6,13 +6,14 @@ use anyhow::Result;
 use crate::config::SimulationConfig;
 use crate::error::QMPError;
 use crate::scheduler::{apply_schedule, Scheduler};
+use crate::ds::program::Program;
 use crate::ds::polycube::Polycube;
 use crate::environment::Environment;
 use crate::generator::ProgramGenerator;
 
 #[derive(Debug, Clone)]
 pub struct SimulationResult {
-    programs: Vec<Polycube>
+    programs: Vec<Program>
 }
 
 pub type JobID = u32;
@@ -21,11 +22,11 @@ pub type JobID = u32;
 struct Job {
     id: JobID,
     added_time: u128,
-    program: Polycube,
+    program: Program,
 }
 
 impl Job {
-    pub fn new(id: JobID, added_time: u128, program: Polycube) -> Self {
+    pub fn new(id: JobID, added_time: u128, program: Program) -> Self {
         Job {
             id,
             added_time,
@@ -99,7 +100,7 @@ impl Simulator {
                     QMPError::invalid_job_id(job_id)
                 })?;
                 let scheduled_program = apply_schedule(&job.program, &schedule);
-                if !self.env.add_polycube(&scheduled_program) {
+                if !self.env.insert_program(&scheduled_program) {
                     return Err(QMPError::invalid_schedule_error(job_id, schedule))
                 }
                 result.push(scheduled_program);
