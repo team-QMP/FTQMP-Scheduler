@@ -1,4 +1,5 @@
 use crate::scheduler::{JobID, Scheduler, Schedule, apply_schedule};
+use crate::ds::program::Program;
 use crate::ds::polycube::Polycube;
 use crate::environment::Environment;
 use crate::config::SimulationConfig;
@@ -6,7 +7,7 @@ use crate::config::SimulationConfig;
 use std::collections::VecDeque;
 
 pub struct GreedyScheduler {
-    program_list: VecDeque<(JobID, Polycube)>,
+    program_list: VecDeque<(JobID, Program)>,
     env: Environment,
     config: SimulationConfig,
 }
@@ -22,7 +23,8 @@ impl GreedyScheduler {
 }
 
 impl Scheduler for GreedyScheduler {
-    fn add_job(&mut self, job_id: JobID, program: Polycube) {
+    fn add_job(&mut self, job_id: JobID, program: Program) {
+        program.polycube().unwrap();
         self.program_list.push_back((job_id, program));
     }
 
@@ -38,7 +40,7 @@ impl Scheduler for GreedyScheduler {
                             for rot in 0..3 {
                                 let schedule = Schedule::new(dx as i32, dy as i32, dz as i32, rot, f == 1);
                                 let program = apply_schedule(&program, &schedule);
-                                if self.env.add_polycube(&program) {
+                                if self.env.insert_program(&program) {
                                     res.push((job_id, schedule));
                                     break 'top;
                                 }
