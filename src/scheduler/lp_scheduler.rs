@@ -1,3 +1,4 @@
+use good_lp::solvers::coin_cbc::CoinCbcProblem;
 use good_lp::{constraint, default_solver, variable, variables, Expression, ProblemVariables, Solution, SolverModel, Variable};
 
 use crate::ds::polycube::Coordinate;
@@ -33,6 +34,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 struct PackingConfig {
+    time_limit: Option<u32>, // in seconds
     size_x: i32,
     size_y: i32,
     size_z: i32
@@ -127,8 +129,12 @@ impl PackingProblem {
 
     fn solve(self) -> Vec<Schedule> {
         let mut problem = self.vars.minimise(self.total_time)
-            .using(default_solver)
+            .using(good_lp::coin_cbc)
             .with(constraint!(self.total_time >= 0));
+        if let Some(time_limit) = self.config.time_limit {
+            problem.set_parameter("sec", &format!("{}", time_limit));
+        }
+
         for (pos, is_present) in self.is_block_present {
             problem = problem.with(constraint!(is_present.clone() <= 1));
             problem = problem.with(constraint!(self.total_time >= pos.z * is_present));
@@ -187,7 +193,12 @@ pub mod test {
 
     #[test]
     fn test_lp() {
-        let config = PackingConfig { size_x : 4, size_y: 3, size_z: 100 };
+        let config = PackingConfig {
+            time_limit: Some(60),
+            size_x: 4,
+            size_y: 3,
+            size_z: 100
+        };
         let format = ProgramFormat::Polycube(Polycube::from(&[
             (0, 0, 0),
             (0, 1, 0),
