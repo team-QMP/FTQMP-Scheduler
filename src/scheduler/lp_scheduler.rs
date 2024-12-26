@@ -197,7 +197,7 @@ pub mod test {
             time_limit: Some(60),
             size_x: 4,
             size_y: 3,
-            size_z: 100
+            size_z: 8, 
         };
         let format = ProgramFormat::Polycube(Polycube::from(&[
             (0, 0, 0),
