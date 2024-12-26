@@ -23,6 +23,10 @@ impl Program {
         }
     }
 
+    pub fn format(&self) -> &ProgramFormat {
+        &self.format
+    }
+
     pub fn check_conflict(&self, other: &Program) -> bool {
         match (self.polycube(), other.polycube()) {
             (Some(p1), Some(p2)) => {
