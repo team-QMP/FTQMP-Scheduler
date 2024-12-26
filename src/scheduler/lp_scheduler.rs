@@ -31,6 +31,7 @@ use std::collections::HashMap;
 //     - #const_num == 空間サイズ
 //     - こっちのほうがいいかも
 
+#[derive(Debug, Clone)]
 struct PackingConfig {
     size_x: i32,
     size_y: i32,
@@ -40,22 +41,14 @@ struct PackingConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct ScheduleVarsKey {
     i: usize, // an index of a program
-    rot: i32,
-    flip: bool,
-    x: i32,
-    y: i32,
-    z: i32,
+    schedule: Schedule,
 }
 
 impl ScheduleVarsKey {
-    fn new(i: usize, schedule: &Schedule) -> Self {
+    fn new(i: usize, schedule: Schedule) -> Self {
         Self {
             i,
-            rot: schedule.rotate,
-            flip: schedule.flip,
-            x: schedule.x,
-            y: schedule.y,
-            z: schedule.z
+            schedule
         }
     }
 }
@@ -80,7 +73,7 @@ fn collect_schedule_candidate(config: &PackingConfig, program: &Program) -> Vec<
                         let schedule = Schedule::new(x, y, z, r, f == 1);
                         let scheduled= apply_schedule(&program, &schedule);
                         let poly = scheduled.polycube().unwrap();
-                        if poly.blocks().iter().all(|b| { b.x <= config.size_x && b.y <= config.size_y && b.z <= config.size_z }) {
+                        if poly.blocks().iter().all(|b| { b.x < config.size_x && b.y < config.size_y && b.z < config.size_z }) {
                             candidates.push((schedule, scheduled));
                         }
                     }
@@ -104,7 +97,7 @@ impl PackingProblem {
             let mut s_sum: Expression = 0.into();
             for (schedule, scheduled) in candidates {
                 let s_var = vars.add(variable().binary());
-                let s_var_key = ScheduleVarsKey::new(i, &schedule);
+                let s_var_key = ScheduleVarsKey::new(i, schedule);
                 s_vars.insert(s_var_key, s_var);
                 s_sum += s_var;
                 match scheduled.format() {
@@ -132,7 +125,7 @@ impl PackingProblem {
         }
     }
 
-    fn solve(self) -> f64 {
+    fn solve(self) -> Vec<Schedule> {
         let mut problem = self.vars.minimise(self.total_time)
             .using(default_solver)
             .with(constraint!(self.total_time >= 0));
@@ -144,8 +137,16 @@ impl PackingProblem {
             problem = problem.with(constraint!(s_sum == 1));
         }
 
-        // TODO: Restore schedule
-        problem.solve().unwrap().value(self.total_time)
+        let solution = problem.solve().unwrap();
+        let mut result = Vec::new();
+        for (key, s_var) in self.s_vars {
+            if f64::abs(solution.value(s_var) - 1.) <= 1e-8 {
+                result.push((key.i, key.schedule.clone()));
+            }
+        }
+
+        result.sort_by(|(i, _), (j, _)| usize::cmp(i, j));
+        result.into_iter().map(|(_, s)| s).collect()
     }
 
 }
@@ -181,6 +182,7 @@ impl PackingProblem {
 pub mod test {
     use crate::ds::program::{Program, ProgramFormat};
     use crate::ds::polycube::Polycube;
+    use crate::scheduler::apply_schedule;
     use crate::scheduler::lp_scheduler::{PackingConfig, PackingProblem};
 
     #[test]
@@ -212,10 +214,35 @@ pub mod test {
             (2, 1, 3),
             (2, 2, 3)
         ]));
-        let programs = (0..2).map(|_| Program::new(format.clone())).collect();
-        let problem = PackingProblem::new(config, programs);
-        assert!(f64::abs(problem.solve() - 4.) <= 1e-8);
+        let programs: Vec<_> = (0..2).map(|_| Program::new(format.clone())).collect();
+
+        let problem = PackingProblem::new(config.clone(), programs.clone());
+        let result = problem.solve();
+        assert_eq!(programs.len(), result.len());
+        let scheduled: Vec<_> = programs.into_iter()
+            .zip(result)
+            .map(|(p, s)| {
+                apply_schedule(&p, &s)
+            }).collect();
+        let mut max_z = 0;
+        for i in 0..scheduled.len() {
+            let poly1 = scheduled[i].polycube().unwrap();
+            for pos in poly1.blocks() {
+                assert!(0 <= pos.x && pos.x < config.size_x);
+                assert!(0 <= pos.y && pos.y < config.size_y);
+                assert!(0 <= pos.z && pos.z < config.size_z);
+                max_z = i32::max(max_z, pos.z);
+            }
+            for j in i+1..scheduled.len() {
+                let poly2 = scheduled[j].polycube().unwrap();
+                for pos1 in poly1.blocks() {
+                    for pos2 in poly2.blocks() {
+                        assert!(pos1 != pos2);
+                    }
+                }
+            }
+        }
+        assert_eq!(max_z, 4);
     }
 
 }
-

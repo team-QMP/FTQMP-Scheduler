@@ -8,7 +8,7 @@ use crate::simulation::JobID;
 use crate::ds::program::{Program, ProgramFormat};
 use crate::ds::polycube::{Polycube, Coordinate};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Schedule {
     pub x: i32,
     pub y: i32,
