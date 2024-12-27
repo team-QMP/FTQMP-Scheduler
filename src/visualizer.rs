@@ -51,13 +51,11 @@ pub fn render_program(programs: &[Program]) {
     for program in programs {
         match program.format() {
             ProgramFormat::Polycube(p) => {
+                let (r, g, b) = rng_color.gen();
                 for block in p.blocks() {
                     let mut c = window.add_cube(scale * (1. - margin), scale * (1. - margin), scale * (1. - margin));
                     let trans = Translation3::new((block.x as f32) * scale, (block.y as f32) * scale, (block.z as f32) * scale);
                     c.append_translation(&trans);
-                    println!("{}, {}, {}", 0, 1, 2);
-                    let (r, g, b) = rng_color.gen();
-                    println!("{}, {}, {}", r, g, b);
                     c.set_color(r, g, b);
                 }
             },
