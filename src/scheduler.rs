@@ -4,9 +4,9 @@ pub mod lp_scheduler;
 pub use greedy_scheduler::GreedyScheduler;
 pub use lp_scheduler::LPScheduler;
 
-use crate::simulation::JobID;
+use crate::ds::polycube::{Coordinate, Polycube};
 use crate::ds::program::{Program, ProgramFormat};
-use crate::ds::polycube::{Polycube, Coordinate};
+use crate::simulation::JobID;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Schedule {
@@ -24,7 +24,7 @@ impl Schedule {
             y,
             z,
             rotate,
-            flip
+            flip,
         }
     }
 }
@@ -47,18 +47,22 @@ pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
             0 => (x, y),
             1 => (-y, x),
             2 => (-x, y),
-            _ => (y, -x)
+            _ => (y, -x),
         };
         min_x = i32::min(min_x, x);
         min_y = i32::min(min_y, y);
         blocks.push(Coordinate::new(x, y, block.z));
     }
 
-    let blocks = blocks.into_iter()
-        .map(|coord| Coordinate::new(
+    let blocks = blocks
+        .into_iter()
+        .map(|coord| {
+            Coordinate::new(
                 coord.x - min_x + schedule.x,
                 coord.y - min_y + schedule.y,
-                coord.z + schedule.z))
+                coord.z + schedule.z,
+            )
+        })
         .collect();
     Program::new(ProgramFormat::Polycube(Polycube::new(blocks)))
 }
@@ -68,16 +72,18 @@ pub trait Scheduler {
     fn run(&mut self) -> Vec<(JobID, Schedule)>;
 }
 
-
 #[cfg(test)]
 mod test {
-    use crate::ds::program::{Program, ProgramFormat};
     use crate::ds::polycube::{Coordinate, Polycube};
-    use crate::scheduler::{Schedule, apply_schedule};
+    use crate::ds::program::{Program, ProgramFormat};
+    use crate::scheduler::{apply_schedule, Schedule};
 
     #[test]
     fn test_apply_schedule() {
-        let p = Program::new(ProgramFormat::Polycube(Polycube::new(vec![Coordinate::new(2, 1, 0), Coordinate::new(1, 2, 0)])));
+        let p = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+            Coordinate::new(2, 1, 0),
+            Coordinate::new(1, 2, 0),
+        ])));
         let s = Schedule::new(1, 10, 3, 1, true);
         let scheduled = apply_schedule(&p, &s);
         let actual = scheduled.polycube().unwrap();

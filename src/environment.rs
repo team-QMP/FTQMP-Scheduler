@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-use crate::ds::program::{Program, ProgramFormat};
 use crate::ds::polycube::{Coordinate, Polycube};
+use crate::ds::program::{Program, ProgramFormat};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -22,7 +22,12 @@ impl Environment {
         // TODO: support other formats
         let polycube = p.polycube().unwrap();
         for block in polycube.blocks() {
-            if block.x < 0 || self.max_x <= block.x || block.y < 0 || self.max_y <= block.y || block.z < 0 {
+            if block.x < 0
+                || self.max_x <= block.x
+                || block.y < 0
+                || self.max_y <= block.y
+                || block.z < 0
+            {
                 return false;
             }
         }
@@ -40,17 +45,23 @@ impl Environment {
 
 #[cfg(test)]
 mod test {
-    use crate::environment::Environment;
-    use crate::ds::program::{Program, ProgramFormat};
     use crate::ds::polycube::{Coordinate, Polycube};
+    use crate::ds::program::{Program, ProgramFormat};
+    use crate::environment::Environment;
 
     #[test]
     fn test_environment_add_polycube() {
         let mut env = Environment::new(100, 100);
 
-        let p1 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![Coordinate::new(0, 0, 0)])));
-        let p2 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![Coordinate::new(1, 1, 1)])));
-        let p3 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![Coordinate::new(0, 0, 0)])));
+        let p1 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+            Coordinate::new(0, 0, 0),
+        ])));
+        let p2 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+            Coordinate::new(1, 1, 1),
+        ])));
+        let p3 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+            Coordinate::new(0, 0, 0),
+        ])));
 
         assert!(env.insert_program(&p1));
         assert!(env.insert_program(&p2));

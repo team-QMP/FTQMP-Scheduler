@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use anyhow::Result;
 
@@ -20,11 +20,10 @@ impl SimulationConfig {
     }
 }
 
-
 #[cfg(test)]
 pub mod test {
-    use std::path::PathBuf;
     use crate::config::SimulationConfig;
+    use std::path::PathBuf;
 
     #[test]
     fn test_read_from_file() {
@@ -34,6 +33,4 @@ pub mod test {
         assert!(config.size_y == 6);
         assert!(config.micro_sec_per_cycle == 100);
     }
-
 }
-
