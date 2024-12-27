@@ -17,6 +17,9 @@ jobs:
     - name: Cache rust registery
       uses: Swatinem/rust-cache@v2
 
+    - name: Prepare dependencies
+      run: sudo apt-get install coinor-cbc coinor-libcbc-dev
+
     - name: Build test
       run: cargo build --release --verbose
     - name: Run tests

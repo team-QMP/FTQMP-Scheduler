@@ -10,10 +10,14 @@ pub struct Coordinate {
     pub z: i32, // time
 }
 
-/// TODO: rotate
-#[derive(Debug, Clone)]
-pub struct Polycube {
-    blocks: Vec<Coordinate>,
+impl From<(i32, i32, i32)> for Coordinate {
+    fn from(item: (i32, i32, i32)) -> Self {
+        Coordinate {
+            x: item.0,
+            y: item.1,
+            z: item.2
+        }
+    }
 }
 
 impl Coordinate {
@@ -23,6 +27,21 @@ impl Coordinate {
             y,
             z
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Polycube {
+    blocks: Vec<Coordinate>,
+}
+
+impl<const N: usize> From<&[(i32, i32, i32); N]> for Polycube {
+    fn from(item: &[(i32, i32, i32); N]) -> Self {
+        let mut blocks = Vec::new();
+        for pos in item {
+            blocks.push(Coordinate::from(pos.clone()));
+        }
+        Polycube::new(blocks)
     }
 }
 
