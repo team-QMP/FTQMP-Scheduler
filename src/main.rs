@@ -5,12 +5,13 @@ use anyhow::Result;
 
 use qmp_scheduler::config::SimulationConfig;
 use qmp_scheduler::generator::TestGenerator;
-use qmp_scheduler::scheduler::GreedyScheduler;
+use qmp_scheduler::scheduler::{Scheduler, GreedyScheduler, LPScheduler};
 use qmp_scheduler::simulation::Simulator;
 
 #[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
 pub enum SchedulerKind {
     Greedy,
+    LP,
 }
 
 #[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
@@ -35,8 +36,9 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let config = SimulationConfig::from_json_file(args.config_path.clone())?;
-    let scheduler = match args.scheduler {
+    let scheduler: Box<dyn Scheduler> = match args.scheduler {
         SchedulerKind::Greedy => Box::new(GreedyScheduler::new(config.clone())),
+        SchedulerKind::LP => Box::new(LPScheduler::new(config.clone())),
     };
     let generator = match args.generator {
         GeneratorKind::Test => Box::new(TestGenerator::new()),

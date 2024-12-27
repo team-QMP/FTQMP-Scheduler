@@ -2,7 +2,7 @@ pub mod greedy_scheduler;
 pub mod lp_scheduler;
 
 pub use greedy_scheduler::GreedyScheduler;
-//pub use lp_scheduler::LPScheduler;
+pub use lp_scheduler::LPScheduler;
 
 use crate::simulation::JobID;
 use crate::ds::program::{Program, ProgramFormat};

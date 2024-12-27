@@ -1,43 +1,19 @@
-use good_lp::solvers::coin_cbc::CoinCbcProblem;
-use good_lp::{constraint, default_solver, variable, variables, Expression, ProblemVariables, Solution, SolverModel, Variable};
-
 use crate::ds::polycube::Coordinate;
 use crate::ds::program::{Program, ProgramFormat};
-use crate::scheduler::{Schedule, apply_schedule};
-//use crate::scheduler::{JobID, Scheduler, Schedule, apply_schedule};
-//use crate::environment::Environment;
-//use crate::config::SimulationConfig;
+use crate::scheduler::{Scheduler, Schedule, JobID, apply_schedule};
+use crate::config::SimulationConfig;
 
-use std::collections::HashMap;
-//use std::collections::VecDeque;
+use good_lp::{constraint, variable, variables, Expression, ProblemVariables, Solution, SolverModel, Variable};
 
-// #var_num := 導入される変数の数
-// #const_num := 導入される制約式の数
-//
-// - (CONST) X, Y, Z := 配置可能最大座標
-// - (VAR) s(i,r,f,x,y,z) := i 番目の polycube を rotate r, flip f で x, y, z にスケジュールするかどうか
-//   - For all i, sum[r, f, x, y, z] s(i,r,f,x,y,z) = 1
-//   - #var_num == 考えられうるスケジューリングの候補数
-//   - #const_num == プログラム数
-// - (CONST) P(i,r,f,x,y,z) := s(i,r,f,x,y,z) を選んだ場合のポリキューブ
-//   - 各ブロック p in P(i,r,f,x,y,z) が 0 <= p_x <= X (Y, Z も同じ) となるように s は制限しておく
-// - (VAR) T[i,x,y,z] := (x,y,z) に i 番目のポリキューブのブロックが存在するか 
-//   - T[i,x,y,z] := sum[r, f, (x',y',z') s.t. (x,y,z) in P(i,r,f,x',y',z')] s(i,r,f,x',y',z')
-//   - #var_num == #const_num == プログラム数 * 空間サイズ
-// - (VAR) U := 目的変数 (total execution time)
-//   - #var_num == 1
-//   - 案1: forall i,r,f,x,y,z. U >= max{p_z | p in P(i,r,f,x,y,z)} * s(i,r,f,x,x,y)
-//     - #const_num == プログラムの数 * スケジューリング候補数(=空間サイズ)
-//   - 案2: forall (x,y,z) in [0,X]*..*[0,Z]. already(x,y,z) + sum[i] T(i,x,y,z)
-//     - #const_num == 空間サイズ
-//     - こっちのほうがいいかも
+use std::collections::{VecDeque, HashMap};
+
 
 #[derive(Debug, Clone)]
 struct PackingConfig {
     time_limit: Option<u32>, // in seconds
-    size_x: i32,
-    size_y: i32,
-    size_z: i32
+    size_x: u32,
+    size_y: u32,
+    size_z: u32
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -72,10 +48,12 @@ fn collect_schedule_candidate(config: &PackingConfig, program: &Program) -> Vec<
             for x in 0..config.size_x {
                 for y in 0..config.size_y {
                     for z in 0..config.size_z {
-                        let schedule = Schedule::new(x, y, z, r, f == 1);
-                        let scheduled= apply_schedule(&program, &schedule);
+                        let schedule = Schedule::new(x as i32, y as i32, z as i32, r, f == 1);
+                        let scheduled= apply_schedule(program, &schedule);
                         let poly = scheduled.polycube().unwrap();
-                        if poly.blocks().iter().all(|b| { b.x < config.size_x && b.y < config.size_y && b.z < config.size_z }) {
+                        if poly.blocks().iter().all(|b| {
+                            (b.x as u32) < config.size_x && (b.y as u32) < config.size_y && (b.z as u32) < config.size_z
+                        }) {
                             candidates.push((schedule, scheduled));
                         }
                     }
@@ -157,31 +135,52 @@ impl PackingProblem {
 
 }
 
-// pub struct LPScheduler {
-//     program_list: VecDeque<(JobID, Program)>,
-//     env: Environment,
-//     config: SimulationConfig,
-// }
-// 
-// impl LPScheduler {
-//     pub fn new(config: SimulationConfig) -> Self {
-//         Self {
-//             program_list: VecDeque::new(),
-//             env: Environment::new(config.size_x as i32, config.size_y as i32),
-//             config,
-//         }
-//     }
-// }
-// 
-// impl Scheduler for LPScheduler {
-//     fn add_job(&mut self, job_id: JobID, program: Program) {
-//         unimplemented!()
-//     }
-// 
-//     fn run(&mut self) -> Vec<(JobID, Schedule)> {
-//         unimplemented!()
-//     }
-// }
+
+// TODO: Currently `LPScheduler` is not supposed to call multiple times.
+pub struct LPScheduler {
+    program_list: VecDeque<(JobID, Program)>,
+    config: SimulationConfig,
+}
+
+impl LPScheduler {
+    pub fn new(config: SimulationConfig) -> Self {
+        Self {
+            program_list: VecDeque::new(),
+            config,
+        }
+    }
+}
+
+impl Scheduler for LPScheduler {
+    fn add_job(&mut self, job_id: JobID, program: Program) {
+        self.program_list.push_back((job_id, program));
+    }
+
+    fn run(&mut self) -> Vec<(JobID, Schedule)> {
+        let worst_zsum = self.program_list.iter()
+            .map(|(_, program)| {
+                match program.format() {
+                    ProgramFormat::Polycube(p) => {
+                        p.blocks().iter().map(|c| c.z).max().unwrap() as u32
+                    },
+                }
+            }).sum();
+        let pack_cfg = PackingConfig {
+            time_limit: None, // TODO
+            size_x: self.config.size_x,
+            size_y: self.config.size_y,
+            size_z: worst_zsum
+        };
+        let programs = self.program_list.iter().map(|(_, program)| program.clone()).collect();
+        let problem = PackingProblem::new(pack_cfg, programs);
+        let schedules = problem.solve();
+
+        self.program_list.iter()
+            .map(|(id, _)| *id)
+            .zip(schedules)
+            .collect()
+    }
+}
 
 
 #[cfg(test)]
@@ -239,9 +238,9 @@ pub mod test {
         for i in 0..scheduled.len() {
             let poly1 = scheduled[i].polycube().unwrap();
             for pos in poly1.blocks() {
-                assert!(0 <= pos.x && pos.x < config.size_x);
-                assert!(0 <= pos.y && pos.y < config.size_y);
-                assert!(0 <= pos.z && pos.z < config.size_z);
+                assert!(0 <= pos.x && (pos.x as u32) < config.size_x);
+                assert!(0 <= pos.y && (pos.y as u32) < config.size_y);
+                assert!(0 <= pos.z && (pos.z as u32) < config.size_z);
                 max_z = i32::max(max_z, pos.z);
             }
             for j in i+1..scheduled.len() {
