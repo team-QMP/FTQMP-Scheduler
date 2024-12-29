@@ -1,4 +1,5 @@
 use clap::Parser;
+use qmp_scheduler::visualizer::render_program;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -47,8 +48,9 @@ fn main() -> Result<()> {
     let mut simulator = Simulator::new(config, generator, scheduler);
 
     // TODO
-    let result = simulator.run();
+    let result = simulator.run()?;
     println!("{:?}", result);
+    render_program(&result.programs);
 
     Ok(())
 }
