@@ -20,6 +20,9 @@ jobs:
     - name: Prepare dependencies
       run: sudo apt-get install coinor-cbc coinor-libcbc-dev
 
+    - name: Check format
+      run: cargo fmt --check
+
     - name: Build test
       run: cargo build --release --verbose
     - name: Run tests

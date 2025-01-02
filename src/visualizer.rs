@@ -1,11 +1,11 @@
-use kiss3d::nalgebra::Translation3;
-use kiss3d::window::Window;
 use kiss3d::light::Light;
+use kiss3d::nalgebra::Translation3;
 use kiss3d::nalgebra::{UnitQuaternion, Vector3};
+use kiss3d::window::Window;
 
 use crate::ds::polycube::Polycube;
-use crate::ds::schedule::Schedule;
 use crate::ds::program::{Program, ProgramFormat};
+use crate::ds::schedule::Schedule;
 
 struct RandomColorGenerator {
     rng: rand::rngs::StdRng,
@@ -15,7 +15,7 @@ impl RandomColorGenerator {
     fn new() -> Self {
         let seed = 42;
         Self {
-            rng: rand::SeedableRng::seed_from_u64(seed)
+            rng: rand::SeedableRng::seed_from_u64(seed),
         }
     }
 
@@ -31,14 +31,22 @@ pub fn visualize(polycube: &Polycube) {
     let scale: f32 = 0.1;
     let margin: f32 = 0.1;
     for pos in polycube.blocks() {
-        let mut c = window.add_cube(scale*(1.-margin),scale*(1.-margin),scale*(1.-margin));
-        c.append_translation(&Translation3::new((pos.x as f32)*scale, (pos.y as f32)*scale,(pos.z as f32)*scale));
+        let mut c = window.add_cube(
+            scale * (1. - margin),
+            scale * (1. - margin),
+            scale * (1. - margin),
+        );
+        c.append_translation(&Translation3::new(
+            (pos.x as f32) * scale,
+            (pos.y as f32) * scale,
+            (pos.z as f32) * scale,
+        ));
         if pos.x == 0 && pos.y == 0 && pos.z == 0 {
-            c.set_color(1., 0., 0., );
+            c.set_color(1., 0., 0.);
         }
     }
     window.set_light(Light::StickToCamera);
-    while window.render(){ }
+    while window.render() {}
 }
 
 #[allow(dead_code)]
@@ -53,16 +61,24 @@ pub fn render_program(programs: &[Program]) {
             ProgramFormat::Polycube(p) => {
                 let (r, g, b) = rng_color.gen();
                 for block in p.blocks() {
-                    let mut c = window.add_cube(scale * (1. - margin), scale * (1. - margin), scale * (1. - margin));
-                    let trans = Translation3::new((block.x as f32) * scale, (block.y as f32) * scale, (block.z as f32) * scale);
+                    let mut c = window.add_cube(
+                        scale * (1. - margin),
+                        scale * (1. - margin),
+                        scale * (1. - margin),
+                    );
+                    let trans = Translation3::new(
+                        (block.x as f32) * scale,
+                        (block.y as f32) * scale,
+                        (block.z as f32) * scale,
+                    );
                     c.append_translation(&trans);
                     c.set_color(r, g, b);
                 }
-            },
+            }
         }
     }
     window.set_light(Light::StickToCamera);
-    while window.render() { } // TOOD: draw in another thread?
+    while window.render() {} // TOOD: draw in another thread?
 }
 
 #[allow(dead_code)]
@@ -73,34 +89,58 @@ pub fn render_cubes(polycubes: &[Polycube], cube_settings: &[Schedule]) {
     let margin: f32 = 0.1;
     let basis_polycube = polycubes[0].clone();
     for pos in basis_polycube.blocks() {
-        let mut c = window.add_cube(scale*(1.-margin),scale*(1.-margin),scale*(1.-margin));
-        c.append_translation(&Translation3::new((pos.x as f32)*scale, (pos.y as f32)*scale,(pos.z as f32)*scale));
+        let mut c = window.add_cube(
+            scale * (1. - margin),
+            scale * (1. - margin),
+            scale * (1. - margin),
+        );
+        c.append_translation(&Translation3::new(
+            (pos.x as f32) * scale,
+            (pos.y as f32) * scale,
+            (pos.z as f32) * scale,
+        ));
         if pos.x == 0 && pos.y == 0 && pos.z == 0 {
-            c.set_color(1., 0., 0., );
+            c.set_color(1., 0., 0.);
         }
     }
 
     for i in 1..polycubes.len() {
         let polycube = &polycubes[i];
-        let schedule = &cube_settings[i-1];
+        let schedule = &cube_settings[i - 1];
         for pos in polycube.blocks() {
-            let mut c = window.add_cube(scale*(1.-margin),scale*(1.-margin),scale*(1.-margin));
-            let angle = (schedule.rotate as f32)*std::f32::consts::PI/2.;
+            let mut c = window.add_cube(
+                scale * (1. - margin),
+                scale * (1. - margin),
+                scale * (1. - margin),
+            );
+            let angle = (schedule.rotate as f32) * std::f32::consts::PI / 2.;
             let axis = Vector3::y_axis();
             let rotation = UnitQuaternion::from_axis_angle(&axis, angle);
             // XZ平面というか、ここではYZ平面で鏡面対称
             if schedule.flip {
-                c.append_translation(&Translation3::new((pos.x as f32)*scale*(-1.), (pos.y as f32)*scale,(pos.z as f32)*scale));
+                c.append_translation(&Translation3::new(
+                    (pos.x as f32) * scale * (-1.),
+                    (pos.y as f32) * scale,
+                    (pos.z as f32) * scale,
+                ));
             } else {
-                c.append_translation(&Translation3::new((pos.x as f32)*scale, (pos.y as f32)*scale,(pos.z as f32)*scale));
+                c.append_translation(&Translation3::new(
+                    (pos.x as f32) * scale,
+                    (pos.y as f32) * scale,
+                    (pos.z as f32) * scale,
+                ));
             }
             c.append_rotation(&rotation);
-            c.append_translation(&Translation3::new((schedule.x as f32)*scale, (schedule.y as f32)*scale,(schedule.z as f32)*scale));
-            c.set_color(0., 1., 0., );
+            c.append_translation(&Translation3::new(
+                (schedule.x as f32) * scale,
+                (schedule.y as f32) * scale,
+                (schedule.z as f32) * scale,
+            ));
+            c.set_color(0., 1., 0.);
         }
     }
     window.set_light(Light::StickToCamera);
-    while window.render(){ }
+    while window.render() {}
 }
 
 //fn create_basis_polyblock() -> Polycube{

@@ -8,10 +8,7 @@ pub enum QMPError {
     #[error("Invalid job ID specified (job_id = {0})")]
     InvalidJobID(JobID),
     #[error("Invalid schedule (job_id = {job_id:?}, schedule = {schedule:?})")]
-    InvalidSchedule {
-        job_id: JobID,
-        schedule: Schedule,
-    }
+    InvalidSchedule { job_id: JobID, schedule: Schedule },
 }
 
 impl QMPError {
@@ -20,10 +17,6 @@ impl QMPError {
     }
 
     pub fn invalid_schedule_error(job_id: JobID, schedule: Schedule) -> anyhow::Error {
-        QMPError::InvalidSchedule {
-            job_id,
-            schedule
-        }.into()
+        QMPError::InvalidSchedule { job_id, schedule }.into()
     }
 }
-

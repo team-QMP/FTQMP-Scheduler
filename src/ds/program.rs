@@ -12,9 +12,7 @@ pub struct Program {
 
 impl Program {
     pub fn new(format: ProgramFormat) -> Self {
-        Program {
-            format
-        }
+        Program { format }
     }
 
     pub fn polycube(&self) -> Option<&Polycube> {
@@ -29,10 +27,11 @@ impl Program {
 
     pub fn check_conflict(&self, other: &Program) -> bool {
         match (self.polycube(), other.polycube()) {
-            (Some(p1), Some(p2)) => {
-                p1.blocks().iter().any(|b1| p2.blocks().iter().any(|b2| b1 == b2))
-            },
-            _ => unimplemented!()
+            (Some(p1), Some(p2)) => p1
+                .blocks()
+                .iter()
+                .any(|b1| p2.blocks().iter().any(|b2| b1 == b2)),
+            _ => unimplemented!(),
         }
     }
 }
