@@ -13,7 +13,7 @@ use crate::scheduler::{apply_schedule, Scheduler};
 
 #[derive(Debug, Clone)]
 pub struct SimulationResult {
-    programs: Vec<Program>,
+    pub programs: Vec<Program>,
 }
 
 pub type JobID = u32;
