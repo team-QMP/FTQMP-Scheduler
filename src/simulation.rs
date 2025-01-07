@@ -1,4 +1,5 @@
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap};
 use std::time::Instant;
@@ -10,7 +11,7 @@ use crate::generator::ProgramGenerator;
 use crate::program::Program;
 use crate::scheduler::{apply_schedule, Scheduler};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
     pub programs: Vec<Program>,
 }

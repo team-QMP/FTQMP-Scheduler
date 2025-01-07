@@ -2,8 +2,9 @@ use std::fs::File;
 use std::io::Write;
 
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct Coordinate {
     pub x: i32,
     pub y: i32,
@@ -26,7 +27,7 @@ impl Coordinate {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Polycube {
     blocks: Vec<Coordinate>,
 }
