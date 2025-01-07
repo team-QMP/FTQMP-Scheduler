@@ -2,7 +2,7 @@ pub mod test_generator;
 
 pub use test_generator::TestGenerator;
 
-use crate::ds::program::Program;
+use crate::program::Program;
 
 pub trait ProgramGenerator {
     /// Generate all programs and the time.

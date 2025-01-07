@@ -1,6 +1,4 @@
-use crate::ds::polycube::{Coordinate, Polycube};
-use crate::ds::program::{Program, ProgramFormat};
-use std::collections::HashSet;
+use crate::program::Program;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -45,9 +43,8 @@ impl Environment {
 
 #[cfg(test)]
 mod test {
-    use crate::ds::polycube::{Coordinate, Polycube};
-    use crate::ds::program::{Program, ProgramFormat};
     use crate::environment::Environment;
+    use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
 
     #[test]
     fn test_environment_add_polycube() {

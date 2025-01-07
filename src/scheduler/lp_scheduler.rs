@@ -1,6 +1,5 @@
 use crate::config::SimulationConfig;
-use crate::ds::polycube::Coordinate;
-use crate::ds::program::{Program, ProgramFormat};
+use crate::program::{Coordinate, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
 use good_lp::{
