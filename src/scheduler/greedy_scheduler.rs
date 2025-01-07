@@ -1,7 +1,6 @@
 use crate::config::SimulationConfig;
-use crate::ds::polycube::Polycube;
-use crate::ds::program::Program;
 use crate::environment::Environment;
+use crate::program::Program;
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
 use std::collections::VecDeque;

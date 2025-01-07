@@ -1,4 +1,6 @@
-use crate::ds::polycube::Polycube;
+pub mod polycube;
+
+pub use polycube::{Coordinate, Polycube};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ProgramFormat {

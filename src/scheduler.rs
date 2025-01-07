@@ -4,8 +4,7 @@ pub mod lp_scheduler;
 pub use greedy_scheduler::GreedyScheduler;
 pub use lp_scheduler::LPScheduler;
 
-use crate::ds::polycube::{Coordinate, Polycube};
-use crate::ds::program::{Program, ProgramFormat};
+use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
 use crate::simulation::JobID;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -74,8 +73,7 @@ pub trait Scheduler {
 
 #[cfg(test)]
 mod test {
-    use crate::ds::polycube::{Coordinate, Polycube};
-    use crate::ds::program::{Program, ProgramFormat};
+    use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
     use crate::scheduler::{apply_schedule, Schedule};
 
     #[test]

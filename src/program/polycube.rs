@@ -111,7 +111,7 @@ fn create_random_polycube(num_block: i32) -> Polycube {
 
 #[cfg(test)]
 mod test {
-    use crate::ds::polycube::{Coordinate, Polycube};
+    use crate::program::{Coordinate, Polycube};
 
     #[test]
     fn test_polycube_new() {

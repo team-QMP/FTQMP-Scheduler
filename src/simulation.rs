@@ -4,11 +4,10 @@ use std::collections::{BTreeMap, BinaryHeap};
 use std::time::Instant;
 
 use crate::config::SimulationConfig;
-use crate::ds::polycube::Polycube;
-use crate::ds::program::Program;
 use crate::environment::Environment;
 use crate::error::QMPError;
 use crate::generator::ProgramGenerator;
+use crate::program::Program;
 use crate::scheduler::{apply_schedule, Scheduler};
 
 #[derive(Debug, Clone)]

@@ -1,6 +1,5 @@
-use crate::ds::polycube::Polycube;
-use crate::ds::program::{Program, ProgramFormat};
 use crate::generator::ProgramGenerator;
+use crate::program::{Polycube, Program, ProgramFormat};
 
 pub struct TestGenerator;
 
