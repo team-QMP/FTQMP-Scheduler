@@ -1,5 +1,4 @@
 use clap::Parser;
-use qmp_scheduler::visualizer::render_program;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -26,6 +25,9 @@ struct Args {
     #[arg(short, long)]
     config_path: PathBuf,
 
+    #[arg(short, long, default_value = "result.json")]
+    output_file: PathBuf,
+
     #[arg(long)]
     scheduler: SchedulerKind,
 
@@ -34,6 +36,8 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+    use std::io::prelude::Write;
+
     let args = Args::parse();
 
     let config = SimulationConfig::from_json_file(args.config_path.clone())?;
@@ -47,10 +51,10 @@ fn main() -> Result<()> {
 
     let mut simulator = Simulator::new(config, generator, scheduler);
 
-    // TODO
     let result = simulator.run()?;
-    println!("{:?}", result);
-    render_program(&result.programs);
+
+    let mut output_file = std::fs::File::create(args.output_file)?;
+    output_file.write_all(serde_json::to_string(&result)?.as_bytes())?;
 
     Ok(())
 }

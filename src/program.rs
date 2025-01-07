@@ -2,12 +2,14 @@ pub mod polycube;
 
 pub use polycube::{Coordinate, Polycube};
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ProgramFormat {
     Polycube(Polycube),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Program {
     format: ProgramFormat,
 }
