@@ -4,8 +4,8 @@ pub mod lp_scheduler;
 pub use greedy_scheduler::GreedyScheduler;
 pub use lp_scheduler::LPScheduler;
 
+use crate::job::{Job, JobID};
 use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
-use crate::simulation::JobID;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Schedule {
@@ -67,7 +67,7 @@ pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
 }
 
 pub trait Scheduler {
-    fn add_job(&mut self, job_id: JobID, program: Program);
+    fn add_job(&mut self, job: Job);
     fn run(&mut self) -> Vec<(JobID, Schedule)>;
 }
 
