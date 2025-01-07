@@ -1,7 +1,7 @@
 use thiserror::Error;
 
+use crate::job::JobID;
 use crate::scheduler::Schedule;
-use crate::simulation::JobID;
 
 #[derive(Error, Debug)]
 pub enum QMPError {

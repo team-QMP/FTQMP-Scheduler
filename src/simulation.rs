@@ -1,6 +1,5 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap};
 use std::time::Instant;
 
@@ -8,43 +7,13 @@ use crate::config::SimulationConfig;
 use crate::environment::Environment;
 use crate::error::QMPError;
 use crate::generator::ProgramGenerator;
+use crate::job::Job;
 use crate::program::Program;
 use crate::scheduler::{apply_schedule, Scheduler};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
     pub programs: Vec<Program>,
-}
-
-pub type JobID = u32;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-struct Job {
-    id: JobID,
-    added_time: u128,
-    program: Program,
-}
-
-impl Job {
-    pub fn new(id: JobID, added_time: u128, program: Program) -> Self {
-        Job {
-            id,
-            added_time,
-            program,
-        }
-    }
-}
-
-impl Ord for Job {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.added_time.cmp(&self.added_time)
-    }
-}
-
-impl PartialOrd for Job {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 pub struct Simulator {
@@ -91,7 +60,7 @@ impl Simulator {
                 && self.future_job_que.peek().unwrap().added_time <= self.current_cycle
             {
                 let job = self.future_job_que.pop().unwrap();
-                self.scheduler.add_job(job.id, job.program);
+                self.scheduler.add_job(job);
             }
 
             // TODO: How to estimate the execution time of the scheduler?

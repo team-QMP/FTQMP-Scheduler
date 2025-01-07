@@ -3,8 +3,8 @@ use kiss3d::nalgebra::Translation3;
 use kiss3d::nalgebra::{UnitQuaternion, Vector3};
 use kiss3d::window::Window;
 
-use crate::ds::schedule::Schedule;
 use crate::program::{Polycube, Program, ProgramFormat};
+use crate::scheduler::Schedule;
 
 struct RandomColorGenerator {
     rng: rand::rngs::StdRng,
