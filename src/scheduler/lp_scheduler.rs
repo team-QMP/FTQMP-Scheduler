@@ -190,8 +190,7 @@ impl Scheduler for LPScheduler {
 
 #[cfg(test)]
 pub mod test {
-    use crate::ds::polycube::Polycube;
-    use crate::ds::program::{Program, ProgramFormat};
+    use crate::program::{Polycube, Program, ProgramFormat};
     use crate::scheduler::apply_schedule;
     use crate::scheduler::lp_scheduler::{PackingConfig, PackingProblem};
 

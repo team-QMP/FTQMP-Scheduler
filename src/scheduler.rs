@@ -73,8 +73,7 @@ pub trait Scheduler {
 
 #[cfg(test)]
 mod test {
-    use crate::ds::polycube::{Coordinate, Polycube};
-    use crate::ds::program::{Program, ProgramFormat};
+    use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
     use crate::scheduler::{apply_schedule, Schedule};
 
     #[test]
