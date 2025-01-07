@@ -1,4 +1,5 @@
 use crate::config::SimulationConfig;
+use crate::job::Job;
 use crate::program::{Coordinate, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
@@ -140,29 +141,29 @@ impl PackingProblem {
 
 // TODO: Currently `LPScheduler` is not supposed to call multiple times.
 pub struct LPScheduler {
-    program_list: VecDeque<(JobID, Program)>,
+    job_list: VecDeque<Job>,
     config: SimulationConfig,
 }
 
 impl LPScheduler {
     pub fn new(config: SimulationConfig) -> Self {
         Self {
-            program_list: VecDeque::new(),
+            job_list: VecDeque::new(),
             config,
         }
     }
 }
 
 impl Scheduler for LPScheduler {
-    fn add_job(&mut self, job_id: JobID, program: Program) {
-        self.program_list.push_back((job_id, program));
+    fn add_job(&mut self, job: Job) {
+        self.job_list.push_back(job);
     }
 
     fn run(&mut self) -> Vec<(JobID, Schedule)> {
         let worst_zsum = self
-            .program_list
+            .job_list
             .iter()
-            .map(|(_, program)| match program.format() {
+            .map(|job| match job.program.format() {
                 ProgramFormat::Polycube(p) => p.blocks().iter().map(|c| c.z).max().unwrap() as u32,
             })
             .sum();
@@ -173,16 +174,16 @@ impl Scheduler for LPScheduler {
             size_z: worst_zsum,
         };
         let programs = self
-            .program_list
+            .job_list
             .iter()
-            .map(|(_, program)| program.clone())
+            .map(|job| job.program.clone())
             .collect();
         let problem = PackingProblem::new(pack_cfg, programs);
         let schedules = problem.solve();
 
-        self.program_list
+        self.job_list
             .iter()
-            .map(|(id, _)| *id)
+            .map(|job| job.id)
             .zip(schedules)
             .collect()
     }
