@@ -61,18 +61,19 @@ fn polycube_to_cuboid(polycube: &Polycube) -> Cuboid {
     // Convert a polycube to a cuboid
     // input: polycube: Polycube
     // output: cuboid: Cuboid
-    let (min_x, max_x, min_y, max_y, min_z, max_z)
-        = polycube.blocks().iter().fold(
-            (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
-            |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
-                (i32::min(min_x, pos.x),
-                       i32::max(max_x, pos.x),
-                       i32::min(min_y, pos.y),
-                       i32::max(max_y, pos.y),
-                       i32::min(min_z, pos.z),
-                       i32::max(max_z, pos.z))
-            }
-        );
+    let (min_x, max_x, min_y, max_y, min_z, max_z) = polycube.blocks().iter().fold(
+        (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
+        |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
+            (
+                i32::min(min_x, pos.x),
+                i32::max(max_x, pos.x),
+                i32::min(min_y, pos.y),
+                i32::max(max_y, pos.y),
+                i32::min(min_z, pos.z),
+                i32::max(max_z, pos.z),
+            )
+        },
+    );
 
     Cuboid {
         min_x,
@@ -264,7 +265,6 @@ fn convex_hull_to_minimal_enclosing_box(
 #[cfg(test)]
 pub mod test {
     // create random polycube
-    use crate::program::polycube::create_random_polycube;
     use crate::preprocessing::convex_hull_to_minimal_enclosing_box;
     use crate::preprocessing::create_random_floatcoordinates;
     use crate::preprocessing::float_coordinates_to_convexhull;
@@ -272,6 +272,7 @@ pub mod test {
     use crate::preprocessing::polycube_to_float_coordinates;
     use crate::preprocessing::print_floatcoordinates;
     use crate::preprocessing::FloatCoordinate;
+    use crate::program::polycube::create_random_polycube;
     use nalgebra::Vector3;
 
     #[test]
