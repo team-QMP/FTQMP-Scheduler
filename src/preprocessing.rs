@@ -1,4 +1,3 @@
-use kiss3d::ncollide3d::shape::ConvexHull;
 use nalgebra::Vector3;
 use qhull::Qh;
 use rand::Rng;
@@ -12,13 +11,15 @@ pub struct FloatCoordinate {
     z: f64,
 }
 
+#[allow(dead_code)]
 fn is_equal_floatcoordinates(point1: &FloatCoordinate, point2: &FloatCoordinate) -> bool {
     // Check if two points are equal
     // input: point1: FloatCoordinate, point2: FloatCoordinate
     // output: bool
-    return point1.x == point2.x && point1.y == point2.y && point1.z == point2.z;
+    point1.x == point2.x && point1.y == point2.y && point1.z == point2.z
 }
 
+#[allow(dead_code)]
 fn print_floatcoordinates(points: &Vec<FloatCoordinate>) {
     // Print a list of points
     // input: points: Vec<FloatCoordinate>
@@ -27,6 +28,7 @@ fn print_floatcoordinates(points: &Vec<FloatCoordinate>) {
     }
 }
 
+#[allow(dead_code)]
 fn create_random_floatcoordinates(n: i32) -> Vec<FloatCoordinate> {
     // Create a list of random points
     // input: n: i32 the number of points
@@ -40,9 +42,10 @@ fn create_random_floatcoordinates(n: i32) -> Vec<FloatCoordinate> {
             z: rng.gen_range(0.0..100.0),
         });
     }
-    return points;
+    points
 }
 
+#[allow(dead_code)]
 pub struct Cuboid {
     min_x: i32,
     max_x: i32,
@@ -52,59 +55,36 @@ pub struct Cuboid {
     max_z: i32,
 }
 
+#[allow(dead_code)]
 fn polycube_to_cuboid(polycube: &Polycube) -> Cuboid {
+    assert!(polycube.size() > 0);
     // Convert a polycube to a cuboid
     // input: polycube: Polycube
     // output: cuboid: Cuboid
-    let mut x_coordinates: Vec<i32> = Vec::new();
-    let mut y_coordinates: Vec<i32> = Vec::new();
-    let mut z_coordinates: Vec<i32> = Vec::new();
-    for i in 0..polycube.size() {
-        let coordinate = polycube.index_to_xyz(i);
-        x_coordinates.push(coordinate.x as i32);
-        y_coordinates.push(coordinate.y as i32);
-        z_coordinates.push(coordinate.z as i32);
+    let (min_x, max_x, min_y, max_y, min_z, max_z)
+        = polycube.blocks().iter().fold(
+            (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
+            |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
+                (i32::min(min_x, pos.x),
+                       i32::max(max_x, pos.x),
+                       i32::min(min_y, pos.y),
+                       i32::max(max_y, pos.y),
+                       i32::min(min_z, pos.z),
+                       i32::max(max_z, pos.z))
+            }
+        );
+
+    Cuboid {
+        min_x,
+        max_x,
+        min_y,
+        max_y,
+        min_z,
+        max_z,
     }
-    let min_x: i32;
-    match x_coordinates.iter().min() {
-        Some(n) => min_x = *n,
-        None => unreachable!(),
-    }
-    let max_x: i32;
-    match x_coordinates.iter().max() {
-        Some(n) => max_x = *n,
-        None => unreachable!(),
-    }
-    let min_y: i32;
-    match y_coordinates.iter().min() {
-        Some(n) => min_y = *n,
-        None => unreachable!(),
-    }
-    let max_y: i32;
-    match y_coordinates.iter().max() {
-        Some(n) => max_y = *n,
-        None => unreachable!(),
-    }
-    let min_z: i32;
-    match z_coordinates.iter().min() {
-        Some(n) => min_z = *n,
-        None => unreachable!(),
-    }
-    let max_z: i32;
-    match z_coordinates.iter().max() {
-        Some(n) => max_z = *n,
-        None => unreachable!(),
-    }
-    return Cuboid {
-        min_x: min_x,
-        max_x: max_x,
-        min_y: min_y,
-        max_y: max_y,
-        min_z: min_z,
-        max_z: max_z,
-    };
 }
 
+#[allow(dead_code)]
 fn polycube_to_float_coordinates(polycube: &Polycube) -> Vec<FloatCoordinate> {
     // Convert a polycube to a list of points
     // input: polycube: Polycube
@@ -153,10 +133,11 @@ fn polycube_to_float_coordinates(polycube: &Polycube) -> Vec<FloatCoordinate> {
             z: coordinate.z as f64 + 1.0,
         }); // add point shifted in x, y and z direction
     }
-    return points;
+    points
 }
 
-fn float_coordinates_to_convexhull<'a>(points: &'a Vec<FloatCoordinate>) -> Qh<'a> {
+#[allow(dead_code)]
+fn float_coordinates_to_convexhull(points: &[FloatCoordinate]) -> Qh {
     // Compute the convex hull of a list of points
     // input: points: Vec<FloatCoordinate>
     // output: qh: Qh
@@ -164,9 +145,10 @@ fn float_coordinates_to_convexhull<'a>(points: &'a Vec<FloatCoordinate>) -> Qh<'
         .compute(true)
         .build_from_iter(points.iter().map(|p| [p.x, p.y, p.z].to_vec()))
         .unwrap();
-    return qh;
+    qh
 }
 
+#[allow(dead_code)]
 fn convex_hull_to_minimal_enclosing_box(
     points: &[Vector3<f64>],
 ) -> (Vector3<f64>, Vector3<f64>, f64) {
@@ -187,7 +169,7 @@ fn convex_hull_to_minimal_enclosing_box(
             Vector3::new(face1.normal()[0], face1.normal()[1], face1.normal()[2]).normalize();
 
         for face2 in qh.all_faces() {
-            if face2.is_sentinel() || (&face1 as *const _) == (&face2 as *const _) {
+            if face2.is_sentinel() || std::ptr::eq(&face1, &face2) {
                 continue;
             }
             let normal2 =
@@ -282,14 +264,13 @@ fn convex_hull_to_minimal_enclosing_box(
 #[cfg(test)]
 pub mod test {
     // create random polycube
-    use crate::ds::polycube::create_random_polycube;
+    use crate::program::polycube::create_random_polycube;
     use crate::preprocessing::convex_hull_to_minimal_enclosing_box;
     use crate::preprocessing::create_random_floatcoordinates;
     use crate::preprocessing::float_coordinates_to_convexhull;
     use crate::preprocessing::polycube_to_cuboid;
     use crate::preprocessing::polycube_to_float_coordinates;
     use crate::preprocessing::print_floatcoordinates;
-    use crate::preprocessing::Cuboid;
     use crate::preprocessing::FloatCoordinate;
     use nalgebra::Vector3;
 
@@ -355,14 +336,13 @@ pub mod test {
             .collect();
         let convexhull = float_coordinates_to_convexhull(&float_points);
         for (i, face) in convexhull.all_faces().enumerate() {
-            let vertices = face.vertices();
             if !face.is_sentinel() {
                 println!("\nFace {}:", i);
-                for vertex in vertices {
+                if let Some(vertices) = face.vertices() {
                     // println!("\nvertex:");
                     // println!("{:?}", vertex);
                     // make a list of coordinates of vertex
-                    let coordinates: Vec<_> = vertex
+                    let coordinates: Vec<_> = vertices
                         .iter()
                         .map(|v| {
                             let point = &points[v.id() as usize];
@@ -373,7 +353,6 @@ pub mod test {
                 }
             }
         }
-        assert_eq!(10, 10);
     }
 
     #[test]
@@ -390,7 +369,7 @@ pub mod test {
                 z: p.z,
             })
             .collect();
-        let convexhull = float_coordinates_to_convexhull(&float_points);
+        let _convexhull = float_coordinates_to_convexhull(&float_points);
         // FloatCoordinateをVector3<f64>に変換
         let vector_points: Vec<Vector3<f64>> =
             points.iter().map(|p| Vector3::new(p.x, p.y, p.z)).collect();
