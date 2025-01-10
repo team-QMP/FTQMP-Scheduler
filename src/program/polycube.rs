@@ -55,6 +55,25 @@ impl Polycube {
         // TODO: check
         self.blocks.push(coord);
     }
+
+    pub fn size(&self) -> i32 {
+        let size: i32 = self.blocks.len() as i32;
+        return size;
+    }
+
+    pub fn index_to_xyz(&self, index: i32) -> Coordinate {
+        let x = self.blocks[index as usize].x;
+        let y = self.blocks[index as usize].y;
+        let z = self.blocks[index as usize].z;
+        let coordinate: Coordinate = Coordinate::new(x, y, z);
+        return coordinate;
+    }
+    pub fn print(&self) {
+        for i in 0..self.size() {
+            let coordinate = self.index_to_xyz(i);
+            println!("({}, {}, {})", coordinate.x, coordinate.y, coordinate.z);
+        }
+    }
 }
 
 pub fn is_collide(_p1: &Polycube, _p2: &Polycube) -> bool {
@@ -102,7 +121,7 @@ fn dump_polycube(polycube: &Polycube, filename: String) {
 }
 
 #[allow(dead_code)]
-fn create_random_polycube(num_block: i32) -> Polycube {
+pub fn create_random_polycube(num_block: i32) -> Polycube {
     let mut polycube = Polycube::new(Vec::new());
     for _ in 0..num_block {
         add_random_block(&mut polycube);
