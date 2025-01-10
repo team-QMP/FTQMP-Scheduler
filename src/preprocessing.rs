@@ -1,9 +1,10 @@
-use crate::ds::polycube::Polycube;
 use kiss3d::ncollide3d::shape::ConvexHull;
 use rand::Rng;
 use qhull::Qh;
 use nalgebra::Vector3;
 use std::f64;
+
+use crate::program::Polycube;
 
 pub struct FloatCoordinate {
     x: f64,
