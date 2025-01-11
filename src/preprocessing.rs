@@ -165,16 +165,14 @@ fn convex_hull_to_minimal_enclosing_box(
     // Note: `Qh::facets` returns sentinal faces only.
     for face1 in qh.facets() {
         let normal1 = face1.normal().unwrap();
-        let normal1 =
-            Vector3::new(normal1[0], normal1[1], normal1[2]).normalize();
+        let normal1 = Vector3::new(normal1[0], normal1[1], normal1[2]).normalize();
 
         for face2 in qh.facets() {
             if std::ptr::eq(&face1, &face2) {
                 continue;
             }
             let normal2 = face2.normal().unwrap();
-            let normal2 =
-                Vector3::new(normal2[0], normal2[1], normal2[2]).normalize();
+            let normal2 = Vector3::new(normal2[0], normal2[1], normal2[2]).normalize();
 
             if normal1.cross(&normal2).norm() < 1e-6 {
                 // Skip if vectors are not independent
@@ -208,7 +206,6 @@ fn convex_hull_to_minimal_enclosing_box(
 
     (best_box_center, best_box_dimensions, min_volume)
 }
-
 
 #[cfg(test)]
 pub mod test {
@@ -299,7 +296,7 @@ pub mod test {
         // convert float coordinates to convex hull
         let vector_points: Vec<Vector3<f64>> =
             points.iter().map(|p| Vector3::new(p.x, p.y, p.z)).collect();
-        // Calculate the minimal enclosing box 
+        // Calculate the minimal enclosing box
         let (center, dimensions, volume) = convex_hull_to_minimal_enclosing_box(&vector_points);
 
         println!("Minimal enclosing box center: {:?}", center);
