@@ -22,6 +22,12 @@ impl Program {
         Program { format }
     }
 
+    pub fn is_polycube(&self) -> bool {
+        match &self.format {
+            ProgramFormat::Polycube(_) => true,
+            _ => false,
+        }
+    }
     pub fn polycube(&self) -> Option<&Polycube> {
         match &self.format {
             ProgramFormat::Polycube(p) => Some(p),
@@ -29,6 +35,12 @@ impl Program {
         }
     }
 
+    pub fn is_cuboid(&self) -> bool {
+        match &self.format {
+            ProgramFormat::Cuboid(_) => true,
+            _ => false,
+        }
+    }
     pub fn cuboid(&self) -> Option<&Cuboid> {
         match &self.format {
             ProgramFormat::Cuboid(c) => Some(c),

@@ -29,8 +29,22 @@ impl ScheduleVarsKey {
     }
 }
 
+enum PackingProblem {
+    Polycube(PolycubePackingProblem),
+    Cuboid(CuboidPackingProblem),
+}
+
+impl PackingProblem {
+    pub fn solve(self) -> Vec<Schedule> {
+        match self {
+            PackingProblem::Polycube(problem) => problem.solve(),
+            PackingProblem::Cuboid(problem) => problem.solve(),
+        }
+    }
+}
+
 #[warn(dead_code)]
-struct PackingProblem {
+struct PolycubePackingProblem {
     config: PackingConfig,
     vars: ProblemVariables,
     s_vars: HashMap<ScheduleVarsKey, Variable>,
@@ -68,7 +82,7 @@ fn collect_schedule_candidate(
     candidates
 }
 
-impl PackingProblem {
+impl PolycubePackingProblem {
     fn new(config: PackingConfig, programs: Vec<Program>) -> Self {
         let mut vars = variables!();
         let mut s_vars = HashMap::new();
@@ -344,12 +358,23 @@ impl Scheduler for LPScheduler {
             size_y: self.config.size_y,
             size_z: worst_zsum,
         };
-        let programs = self
+        // TODO: Batch processing
+        let programs: Vec<_> = self
             .job_list
             .iter()
             .map(|job| job.program.clone())
             .collect();
-        let problem = PackingProblem::new(pack_cfg, programs);
+        let problem = if programs.iter().all(|p| p.is_polycube()) {
+            PackingProblem::Polycube(PolycubePackingProblem::new(pack_cfg, programs))
+        } else if programs.iter().all(|p| p.is_cuboid()) {
+            let cuboids = programs
+                .into_iter()
+                .map(|p| p.cuboid().unwrap().clone())
+                .collect();
+            PackingProblem::Cuboid(CuboidPackingProblem::new(pack_cfg, cuboids))
+        } else {
+            unimplemented!()
+        };
         let schedules = problem.solve();
 
         self.job_list
