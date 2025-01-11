@@ -5,7 +5,7 @@ pub use greedy_scheduler::GreedyScheduler;
 pub use lp_scheduler::LPScheduler;
 
 use crate::job::{Job, JobID};
-use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
+use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Schedule {
@@ -29,10 +29,7 @@ impl Schedule {
 }
 
 /// Note: flip -> rotate -> (adjust coordinates) -> shift
-/// Support polycube format only.
-pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
-    assert!(0 <= schedule.rotate && schedule.rotate < 3);
-    let polycube = program.polycube().unwrap(); // TODO: error handling
+pub fn apply_schedule_to_polycube(polycube: &Polycube, schedule: &Schedule) -> Polycube {
     let mut blocks = Vec::new();
     let mut min_x = i32::MAX;
     let mut min_y = i32::MAX;
@@ -63,7 +60,33 @@ pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
             )
         })
         .collect();
-    Program::new(ProgramFormat::Polycube(Polycube::new(blocks)))
+    Polycube::new(blocks)
+}
+
+pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
+    assert!(0 <= schedule.rotate && schedule.rotate < 3);
+    match program.format() {
+        ProgramFormat::Polycube(polycube) => {
+            let scheduled = apply_schedule_to_polycube(polycube, schedule);
+            Program::new(ProgramFormat::Polycube(scheduled))
+        }
+        ProgramFormat::Cuboid(cuboid) => {
+            if let Some(polycube) = cuboid.original() {
+                let scheduled_poly = apply_schedule_to_polycube(polycube, schedule);
+                let cuboid = Cuboid::from(&scheduled_poly);
+                Program::new(ProgramFormat::Cuboid(cuboid))
+            } else {
+                let (size_x, size_y) = if schedule.rotate % 2 == 1 {
+                    (cuboid.size_y(), cuboid.size_x())
+                } else {
+                    (cuboid.size_x(), cuboid.size_y())
+                };
+                let pos = Coordinate::new(schedule.x, schedule.y, schedule.z);
+                let cuboid = Cuboid::new(pos, size_x, size_y, cuboid.size_z());
+                Program::new(ProgramFormat::Cuboid(cuboid))
+            }
+        }
+    }
 }
 
 pub trait Scheduler {

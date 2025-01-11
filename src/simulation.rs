@@ -55,8 +55,8 @@ impl Simulator {
 
         let mut result = Vec::new(); // TODO
 
-        while self.job_que.len() != 0 && self.future_job_que.len() != 0 {
-            while self.future_job_que.len() != 0
+        while !self.job_que.is_empty() || !self.future_job_que.is_empty() {
+            while !self.future_job_que.is_empty()
                 && self.future_job_que.peek().unwrap().added_time <= self.current_cycle
             {
                 let job = self.future_job_que.pop().unwrap();
@@ -67,8 +67,7 @@ impl Simulator {
             let start = Instant::now();
             let issued_programs = self.scheduler.run();
             let elapsed = start.elapsed().as_micros();
-            let elapsed_cycles =
-                (elapsed + self.config.micro_sec_per_cycle - 1) / self.config.micro_sec_per_cycle;
+            let elapsed_cycles = elapsed.div_ceil(self.config.micro_sec_per_cycle);
 
             for (job_id, schedule) in issued_programs {
                 let job = self
@@ -77,7 +76,7 @@ impl Simulator {
                     .ok_or_else(|| QMPError::invalid_job_id(job_id))?;
                 let scheduled_program = apply_schedule(&job.program, &schedule);
                 if !self.env.insert_program(&scheduled_program) {
-                    return Err(QMPError::invalid_schedule_error(job_id, schedule));
+                    return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
                 }
                 result.push(scheduled_program);
                 self.job_que.remove(&job_id);

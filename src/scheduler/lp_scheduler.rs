@@ -348,8 +348,13 @@ impl Scheduler for LPScheduler {
             .job_list
             .iter()
             .map(|job| match job.program.format() {
-                ProgramFormat::Polycube(p) => p.blocks().iter().map(|c| c.z).max().unwrap() as u32,
-                _ => unimplemented!(),
+                ProgramFormat::Polycube(p) => {
+                    p.blocks().iter().map(|c| c.z).max().unwrap() as u32 + 1
+                }
+                ProgramFormat::Cuboid(c) => {
+                    assert!(c.pos().z == 0);
+                    c.size_z() as u32
+                }
             })
             .sum();
         let pack_cfg = PackingConfig {
