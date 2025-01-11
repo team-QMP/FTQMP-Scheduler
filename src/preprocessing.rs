@@ -162,22 +162,22 @@ fn convex_hull_to_minimal_enclosing_box(
     let mut best_box_center = Vector3::zeros();
     let mut best_box_dimensions = Vector3::zeros();
 
-    for face1 in qh.all_faces() {
-        if face1.is_sentinel() {
-            continue;
-        }
+    // Note: `Qh::facets` returns sentinal faces only.
+    for face1 in qh.facets() {
+        let normal1 = face1.normal().unwrap();
         let normal1 =
-            Vector3::new(face1.normal()[0], face1.normal()[1], face1.normal()[2]).normalize();
+            Vector3::new(normal1[0], normal1[1], normal1[2]).normalize();
 
-        for face2 in qh.all_faces() {
-            if face2.is_sentinel() || std::ptr::eq(&face1, &face2) {
+        for face2 in qh.facets() {
+            if std::ptr::eq(&face1, &face2) {
                 continue;
             }
+            let normal2 = face2.normal().unwrap();
             let normal2 =
-                Vector3::new(face2.normal()[0], face2.normal()[1], face2.normal()[2]).normalize();
+                Vector3::new(normal2[0], normal2[1], normal2[2]).normalize();
 
             if normal1.cross(&normal2).norm() < 1e-6 {
-                // ベクトルが独立していない場合はスキップ
+                // Skip if vectors are not independent
                 continue;
             }
 
@@ -209,58 +209,6 @@ fn convex_hull_to_minimal_enclosing_box(
     (best_box_center, best_box_dimensions, min_volume)
 }
 
-// fn convex_hull_to_minimal_enclosing_box(points: &[Vector3<f64>]) -> (Vector3<f64>, Vector3<f64>, f64) {
-//     let qh = Qh::builder()
-//         .compute(true)
-//         .build_from_iter(points.iter().map(|p| vec![p.x, p.y, p.z]))
-//         .unwrap();
-
-//     let mut min_volume = f64::MAX;
-//     let mut best_box_center = Vector3::zeros();
-//     let mut best_box_dimensions = Vector3::zeros();
-
-//     for face1 in qh.all_faces() {
-//         if face1.is_sentinel() {
-//             continue;
-//         }
-//         let normal1 = Vector3::new(face1.normal()[0], face1.normal()[1], face1.normal()[2]);
-
-//         for face2 in qh.all_faces() {
-//             if face2.is_sentinel() || (&face1 as *const _) == (&face2 as *const _) {
-//                 continue;
-//             }
-//             let normal2 = Vector3::new(face2.normal()[0], face2.normal()[1], face2.normal()[2]);
-
-//             if normal1.dot(&normal2).abs() > 1e-6 {
-//                 continue;
-//             }
-
-//             let normal3 = normal1.cross(&normal2).normalize();
-//             let rotation = nalgebra::Rotation3::from_basis_unchecked(&[normal1, normal2, normal3]);
-
-//             let rotated_points: Vec<Vector3<f64>> = points
-//                 .iter()
-//                 .map(|p| rotation * p)
-//                 .collect();
-
-//             let (min_point, max_point) = rotated_points.iter().fold(
-//                 (Vector3::repeat(f64::MAX), Vector3::repeat(f64::MIN)),
-//                 |(min, max), point| (min.inf(point), max.sup(point)),
-//             );
-
-//             let dimensions = max_point - min_point;
-//             let volume = dimensions.x * dimensions.y * dimensions.z;
-
-//             if volume < min_volume {
-//                 min_volume = volume;
-//                 best_box_center = rotation.inverse() * ((min_point + max_point) / 2.0);
-//                 best_box_dimensions = dimensions;
-//             }
-//         }
-//     }
-
-//     (best_box_center, best_box_dimensions, min_volume)
-// }
 
 #[cfg(test)]
 pub mod test {
@@ -271,7 +219,6 @@ pub mod test {
     use crate::preprocessing::polycube_to_cuboid;
     use crate::preprocessing::polycube_to_float_coordinates;
     use crate::preprocessing::print_floatcoordinates;
-    use crate::preprocessing::FloatCoordinate;
     use crate::program::polycube::create_random_polycube;
     use nalgebra::Vector3;
 
@@ -327,32 +274,20 @@ pub mod test {
         println!("Random points:");
         print_floatcoordinates(&points);
         // convert float coordinates to convex hull
-        let float_points: Vec<FloatCoordinate> = points
-            .iter()
-            .map(|p| FloatCoordinate {
-                x: p.x,
-                y: p.y,
-                z: p.z,
-            })
-            .collect();
-        let convexhull = float_coordinates_to_convexhull(&float_points);
-        for (i, face) in convexhull.all_faces().enumerate() {
-            if !face.is_sentinel() {
-                println!("\nFace {}:", i);
-                if let Some(vertices) = face.vertices() {
-                    // println!("\nvertex:");
-                    // println!("{:?}", vertex);
-                    // make a list of coordinates of vertex
-                    let coordinates: Vec<_> = vertices
-                        .iter()
-                        .map(|v| {
-                            let point = &points[v.id() as usize];
-                            [point.x, point.y, point.z]
-                        })
-                        .collect();
-                    println!("{:?}", coordinates);
-                }
-            }
+        let qh = float_coordinates_to_convexhull(&points);
+        for (i, face) in qh.facets().enumerate() {
+            println!("\nFace {}:", i);
+            let vertices = face.vertices().unwrap();
+            println!("vertices:\n{:?}", vertices);
+            // make a list of coordinates of vertex
+            let coordinates: Vec<_> = vertices
+                .iter()
+                .map(|v| {
+                    let point = &points[v.index_unchecked(&qh)];
+                    [point.x, point.y, point.z]
+                })
+                .collect();
+            println!("{:?}", coordinates);
         }
     }
 
@@ -362,19 +297,9 @@ pub mod test {
         println!("Random points:");
         print_floatcoordinates(&points);
         // convert float coordinates to convex hull
-        let float_points: Vec<FloatCoordinate> = points
-            .iter()
-            .map(|p| FloatCoordinate {
-                x: p.x,
-                y: p.y,
-                z: p.z,
-            })
-            .collect();
-        let _convexhull = float_coordinates_to_convexhull(&float_points);
-        // FloatCoordinateをVector3<f64>に変換
         let vector_points: Vec<Vector3<f64>> =
             points.iter().map(|p| Vector3::new(p.x, p.y, p.z)).collect();
-        // 最小内包ボックスを計算
+        // Calculate the minimal enclosing box 
         let (center, dimensions, volume) = convex_hull_to_minimal_enclosing_box(&vector_points);
 
         println!("Minimal enclosing box center: {:?}", center);
