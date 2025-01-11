@@ -92,7 +92,8 @@ impl PackingProblem {
                                 is_block_present.insert(block.clone(), s_var.into());
                             }
                         }
-                    }
+                    },
+                    _ => unimplemented!()
                 }
             }
             s_sums.push(s_sum);
@@ -165,6 +166,7 @@ impl Scheduler for LPScheduler {
             .iter()
             .map(|job| match job.program.format() {
                 ProgramFormat::Polycube(p) => p.blocks().iter().map(|c| c.z).max().unwrap() as u32,
+                _ => unimplemented!()
             })
             .sum();
         let pack_cfg = PackingConfig {

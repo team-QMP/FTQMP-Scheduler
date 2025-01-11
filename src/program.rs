@@ -1,12 +1,15 @@
 pub mod polycube;
+pub mod cuboid;
 
 pub use polycube::{Coordinate, Polycube};
+pub use cuboid::Cuboid;
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ProgramFormat {
     Polycube(Polycube),
+    Cuboid(Cuboid),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -22,6 +25,14 @@ impl Program {
     pub fn polycube(&self) -> Option<&Polycube> {
         match &self.format {
             ProgramFormat::Polycube(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    pub fn cuboid(&self) -> Option<&Cuboid> {
+        match &self.format {
+            ProgramFormat::Cuboid(c) => Some(c),
+            _ => None,
         }
     }
 

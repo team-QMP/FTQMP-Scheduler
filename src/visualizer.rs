@@ -73,7 +73,8 @@ pub fn render_program(programs: &[Program]) {
                     c.append_translation(&trans);
                     c.set_color(r, g, b);
                 }
-            }
+            },
+            _ => unimplemented!()
         }
     }
     window.set_light(Light::StickToCamera);
