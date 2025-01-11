@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::program::{Polycube, Coordinate};
+use crate::program::{Coordinate, Polycube};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Cuboid {
@@ -31,7 +31,7 @@ impl From<&Polycube> for Cuboid {
             size_x: (max_x - min_x + 1) as usize,
             size_y: (max_y - min_y + 1) as usize,
             size_z: (max_z - min_z + 1) as usize,
-            original: Some(item.clone())
+            original: Some(item.clone()),
         }
     }
 }
@@ -43,7 +43,7 @@ impl Cuboid {
             size_x,
             size_y,
             size_z,
-            original: None
+            original: None,
         }
     }
 
@@ -66,7 +66,7 @@ impl Cuboid {
 
 #[cfg(test)]
 mod test {
-    use crate::program::{Polycube, Coordinate, Cuboid};
+    use crate::program::{Coordinate, Cuboid, Polycube};
 
     #[test]
     fn test_create_cuboid_from_polycube() {

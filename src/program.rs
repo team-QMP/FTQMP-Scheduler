@@ -1,8 +1,8 @@
-pub mod polycube;
 pub mod cuboid;
+pub mod polycube;
 
-pub use polycube::{Coordinate, Polycube};
 pub use cuboid::Cuboid;
+pub use polycube::{Coordinate, Polycube};
 
 use serde::{Deserialize, Serialize};
 
