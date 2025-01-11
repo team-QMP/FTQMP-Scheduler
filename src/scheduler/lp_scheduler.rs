@@ -393,11 +393,13 @@ impl Scheduler for LPScheduler {
 #[cfg(test)]
 pub mod test {
     use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
-    use crate::scheduler::lp_scheduler::{PackingConfig, PackingProblem};
-    use crate::scheduler::{apply_schedule, Schedule};
+    use crate::scheduler::apply_schedule;
+    use crate::scheduler::lp_scheduler::PackingConfig;
 
-    //#[test]
+    #[test]
     fn test_lp_polycube() {
+        use crate::scheduler::lp_scheduler::PolycubePackingProblem;
+
         let config = PackingConfig {
             time_limit: Some(60),
             size_x: 4,
@@ -432,7 +434,7 @@ pub mod test {
         ]));
         let programs: Vec<_> = (0..2).map(|_| Program::new(format.clone())).collect();
 
-        let problem = PackingProblem::new(config.clone(), programs.clone());
+        let problem = PolycubePackingProblem::new(config.clone(), programs.clone());
         let result = problem.solve();
         assert_eq!(programs.len(), result.len());
         let scheduled: Vec<_> = programs
