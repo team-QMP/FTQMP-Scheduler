@@ -293,7 +293,7 @@ pub mod test {
         let points = create_random_floatcoordinates(10);
         println!("Random points:");
         print_floatcoordinates(&points);
-        // convert float coordinates to convex hull
+        // Convert `FloatCoordinate` to `Vector3`
         let vector_points: Vec<Vector3<f64>> =
             points.iter().map(|p| Vector3::new(p.x, p.y, p.z)).collect();
         // Calculate the minimal enclosing box
