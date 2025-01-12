@@ -12,5 +12,6 @@ kiss3d = "0.32"
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-qhull = "0.3"
+#qhull = "0.3.1"
+qhull = { git = "https://github.com/LucaCiucci/qhull-rs" }
 nalgebra = "0.32"
