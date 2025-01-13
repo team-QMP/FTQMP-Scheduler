@@ -1,0 +1,10 @@
+size_x = 6
+size_y = 6
+micro_sec_per_cycle = 100
+
+[generator]
+kind = "test"
+
+[scheduler]
+kind = "greedy"
+time_limit = 60

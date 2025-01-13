@@ -7,6 +7,15 @@ pub use lp_scheduler::LPScheduler;
 use crate::job::{Job, JobID};
 use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, clap::ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum SchedulerKind {
+    Greedy,
+    LP,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Schedule {
     pub x: i32,

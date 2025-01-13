@@ -67,7 +67,7 @@ impl Simulator {
             let start = Instant::now();
             let issued_programs = self.scheduler.run();
             let elapsed = start.elapsed().as_micros();
-            let elapsed_cycles = elapsed.div_ceil(self.config.micro_sec_per_cycle);
+            let elapsed_cycles = elapsed.div_ceil(self.config.micro_sec_per_cycle.into());
 
             for (job_id, schedule) in issued_programs {
                 let job = self
