@@ -13,7 +13,7 @@ pub enum GeneratorKind {
 
 pub trait ProgramGenerator {
     /// Generate all programs and the time.
-    fn generate(&self) -> Vec<(u128, Program)>;
+    fn generate(&self) -> Vec<(u64, Program)>;
     /// Generate a program immediately.
     fn generate_one(&self) -> Program;
 }

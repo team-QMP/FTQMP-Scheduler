@@ -10,7 +10,7 @@ impl TestGenerator {
 }
 
 impl ProgramGenerator for TestGenerator {
-    fn generate(&self) -> Vec<(u128, Program)> {
+    fn generate(&self) -> Vec<(u64, Program)> {
         let prog_num = 5;
         let format = ProgramFormat::Polycube(Polycube::from(&[
             (0, 0, 0),

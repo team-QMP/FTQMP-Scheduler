@@ -5,7 +5,10 @@ pub struct Environment {
     issued_programs: Vec<Program>,
     size_x: i32,
     size_y: i32,
-    current_cycle: u128,
+    /// The maximum z position of issued programs.
+    max_z: u64,
+    /// The program counter (i.e., $z$ position) currently executing
+    program_counter: u64,
 }
 
 impl Environment {
@@ -14,7 +17,8 @@ impl Environment {
             issued_programs: Vec::new(),
             size_x,
             size_y,
-            current_cycle: 0,
+            max_z: 0,
+            program_counter: 0,
         }
     }
 
@@ -36,6 +40,16 @@ impl Environment {
         let can_insert = is_in_range && !is_overlap;
         if can_insert {
             self.issued_programs.push(p.clone());
+            match p.format() {
+                ProgramFormat::Polycube(p) => {
+                    for b in p.blocks() {
+                        self.max_z = u64::max(self.max_z, b.z as u64);
+                    }
+                }
+                ProgramFormat::Cuboid(c) => {
+                    self.max_z = u64::max(self.max_z, c.pos().z as u64 + c.size_z() as u64)
+                }
+            }
         }
         can_insert
     }
@@ -44,12 +58,16 @@ impl Environment {
         &self.issued_programs
     }
 
-    pub fn current_cycle(&self) -> u128 {
-        self.current_cycle
+    pub fn max_z(&self) -> u64 {
+        self.max_z
     }
 
-    pub fn incr_cycle(&mut self, cycle: u128) {
-        self.current_cycle += cycle;
+    pub fn program_counter(&self) -> u64 {
+        self.program_counter
+    }
+
+    pub fn incr_pc(&mut self, count: u64) {
+        self.program_counter += count;
     }
 }
 

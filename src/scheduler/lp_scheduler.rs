@@ -1,4 +1,5 @@
 use crate::config::SimulationConfig;
+use crate::environment::Environment;
 use crate::job::Job;
 use crate::program::{Coordinate, Cuboid, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
@@ -323,7 +324,6 @@ impl CuboidPackingProblem {
     }
 }
 
-// TODO: Currently `LPScheduler` is not supposed to call multiple times.
 pub struct LPScheduler {
     job_list: VecDeque<Job>,
     config: SimulationConfig,
@@ -343,7 +343,7 @@ impl Scheduler for LPScheduler {
         self.job_list.push_back(job);
     }
 
-    fn run(&mut self) -> Vec<(JobID, Schedule)> {
+    fn run(&mut self, env: &Environment) -> Vec<(JobID, Schedule)> {
         let worst_zsum = self
             .job_list
             .iter()
@@ -358,7 +358,7 @@ impl Scheduler for LPScheduler {
             })
             .sum();
         let pack_cfg = PackingConfig {
-            time_limit: None, // TODO
+            time_limit: self.config.scheduler.time_limit,
             size_x: self.config.size_x,
             size_y: self.config.size_y,
             size_z: worst_zsum,
@@ -381,6 +381,12 @@ impl Scheduler for LPScheduler {
             unimplemented!()
         };
         let schedules = problem.solve();
+        // The schedules calculated with an empty environment, it is necessary to shift their z
+        // position by the maximum z point of issued programs.
+        let schedules: Vec<_> = schedules
+            .into_iter()
+            .map(|s| Schedule::new(s.x, s.y, s.z + env.max_z() as i32, s.rotate, s.flip))
+            .collect();
 
         self.job_list
             .iter()
