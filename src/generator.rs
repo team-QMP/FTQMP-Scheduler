@@ -3,6 +3,13 @@ pub mod test_generator;
 pub use test_generator::TestGenerator;
 
 use crate::program::Program;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, clap::ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum GeneratorKind {
+    Test,
+}
 
 pub trait ProgramGenerator {
     /// Generate all programs and the time.
