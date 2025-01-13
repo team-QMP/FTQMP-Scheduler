@@ -1,5 +1,7 @@
+pub mod cuboid;
 pub mod polycube;
 
+pub use cuboid::Cuboid;
 pub use polycube::{Coordinate, Polycube};
 
 use serde::{Deserialize, Serialize};
@@ -7,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ProgramFormat {
     Polycube(Polycube),
+    Cuboid(Cuboid),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -19,23 +22,68 @@ impl Program {
         Program { format }
     }
 
+    pub fn is_polycube(&self) -> bool {
+        matches!(&self.format, ProgramFormat::Polycube(_))
+    }
+
     pub fn polycube(&self) -> Option<&Polycube> {
         match &self.format {
             ProgramFormat::Polycube(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    pub fn is_cuboid(&self) -> bool {
+        matches!(&self.format, ProgramFormat::Cuboid(_))
+    }
+
+    pub fn cuboid(&self) -> Option<&Cuboid> {
+        match &self.format {
+            ProgramFormat::Cuboid(c) => Some(c),
+            _ => None,
         }
     }
 
     pub fn format(&self) -> &ProgramFormat {
         &self.format
     }
+}
 
-    pub fn check_conflict(&self, other: &Program) -> bool {
-        match (self.polycube(), other.polycube()) {
-            (Some(p1), Some(p2)) => p1
-                .blocks()
-                .iter()
-                .any(|b1| p2.blocks().iter().any(|b2| b1 == b2)),
-            _ => unimplemented!(),
+pub fn is_overlap_polycubes(p1: &Polycube, p2: &Polycube) -> bool {
+    p1.blocks()
+        .iter()
+        .any(|b1| p2.blocks().iter().any(|b2| b1 == b2))
+}
+
+pub fn is_overlap_cuboids(c1: &Cuboid, c2: &Cuboid) -> bool {
+    let is_overlap_x = !(c1.pos().x + c1.size_x() as i32 <= c2.pos().x
+        || c2.pos().x + c2.size_x() as i32 <= c1.pos().x);
+    let is_overlap_y = !(c1.pos().y + c1.size_y() as i32 <= c2.pos().y
+        || c2.pos().y + c2.size_y() as i32 <= c1.pos().y);
+    let is_overlap_z = !(c1.pos().z + c1.size_z() as i32 <= c2.pos().z
+        || c2.pos().z + c2.size_z() as i32 <= c1.pos().z);
+    is_overlap_x && is_overlap_y && is_overlap_z
+}
+
+pub fn is_overlap_polycube_cuboid(p: &Polycube, c: &Cuboid) -> bool {
+    p.blocks().iter().any(|b| {
+        let cp = c.pos();
+        cp.x <= b.x
+            && b.x < cp.x + c.size_x() as i32
+            && cp.y <= b.y
+            && b.y <= cp.y + c.size_y() as i32
+            && cp.z <= b.z
+            && b.z <= cp.z + c.size_z() as i32
+    })
+}
+
+pub fn is_overlap(p1: &Program, p2: &Program) -> bool {
+    match (p1.format(), p2.format()) {
+        (ProgramFormat::Polycube(p1), ProgramFormat::Polycube(p2)) => is_overlap_polycubes(p1, p2),
+        (ProgramFormat::Polycube(p), ProgramFormat::Cuboid(c))
+        | (ProgramFormat::Cuboid(c), ProgramFormat::Polycube(p)) => {
+            is_overlap_polycube_cuboid(p, c)
         }
+        (ProgramFormat::Cuboid(c1), ProgramFormat::Cuboid(c2)) => is_overlap_cuboids(c1, c2),
     }
 }

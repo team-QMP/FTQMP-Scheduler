@@ -1,39 +1,41 @@
-use crate::program::Program;
+use crate::program::{is_overlap, Program, ProgramFormat};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
     programs: Vec<Program>,
-    max_x: i32,
-    max_y: i32,
+    size_x: i32,
+    size_y: i32,
 }
 
 impl Environment {
-    pub fn new(max_x: i32, max_y: i32) -> Self {
+    pub fn new(size_x: i32, size_y: i32) -> Self {
         Self {
             programs: Vec::new(),
-            max_x,
-            max_y,
+            size_x,
+            size_y,
         }
     }
 
     pub fn insert_program(&mut self, p: &Program) -> bool {
-        // TODO: support other formats
-        let polycube = p.polycube().unwrap();
-        for block in polycube.blocks() {
-            if block.x < 0
-                || self.max_x <= block.x
-                || block.y < 0
-                || self.max_y <= block.y
-                || block.z < 0
-            {
-                return false;
+        let is_in_range = match p.format() {
+            ProgramFormat::Polycube(polycube) => polycube.blocks().iter().all(|b| {
+                0 <= b.x && b.x < self.size_x && 0 <= b.y && b.y < self.size_y && 0 <= b.z
+            }),
+            ProgramFormat::Cuboid(c) => {
+                let pos = c.pos();
+                0 <= pos.x
+                    && pos.x + (c.size_x() as i32) <= self.size_x
+                    && 0 <= pos.y
+                    && pos.y + (c.size_y() as i32) <= self.size_y
+                    && 0 <= pos.z
             }
-        }
-        let is_collide = self.programs.iter().any(|p2| p2.check_conflict(p));
-        if !is_collide {
+        };
+        let is_overlap = self.programs.iter().any(|p2| is_overlap(p, p2));
+        let can_insert = is_in_range && !is_overlap;
+        if can_insert {
             self.programs.push(p.clone());
         }
-        !is_collide
+        can_insert
     }
 
     pub fn programs(&self) -> &Vec<Program> {

@@ -74,6 +74,7 @@ pub fn render_program(programs: &[Program]) {
                     c.set_color(r, g, b);
                 }
             }
+            _ => unimplemented!(),
         }
     }
     window.set_light(Light::StickToCamera);
