@@ -262,7 +262,7 @@ impl CuboidPackingProblem {
         }
     }
 
-    pub fn solve(mut self) -> Vec<Schedule> {
+    pub fn solve(self) -> Vec<Schedule> {
         let mut problem = self.vars.minimise(self.v).using(good_lp::coin_cbc);
 
         if let Some(time_limit) = self.config.time_limit {
@@ -451,8 +451,8 @@ pub mod test {
                 assert!(0 <= pos.z && (pos.z as u32) < config.size_z);
                 max_z = i32::max(max_z, pos.z);
             }
-            for j in i + 1..scheduled.len() {
-                let poly2 = scheduled[j].polycube().unwrap();
+            for scheduled_j in scheduled.iter().skip(i + 1) {
+                let poly2 = scheduled_j.polycube().unwrap();
                 for pos1 in poly1.blocks() {
                     for pos2 in poly2.blocks() {
                         assert!(pos1 != pos2);

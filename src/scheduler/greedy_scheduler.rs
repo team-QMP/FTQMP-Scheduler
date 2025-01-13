@@ -28,7 +28,7 @@ impl Scheduler for GreedyScheduler {
 
     fn run(&mut self) -> Vec<(JobID, Schedule)> {
         let mut res = Vec::new();
-        while self.job_list.len() != 0 {
+        while !self.job_list.is_empty() {
             let job = self.job_list.pop_front().unwrap();
             let mut dz = 0;
             'top: loop {
@@ -37,7 +37,7 @@ impl Scheduler for GreedyScheduler {
                         for f in [0, 1] {
                             for rot in 0..3 {
                                 let schedule =
-                                    Schedule::new(dx as i32, dy as i32, dz as i32, rot, f == 1);
+                                    Schedule::new(dx as i32, dy as i32, dz, rot, f == 1);
                                 let program = apply_schedule(&job.program, &schedule);
                                 if self.env.insert_program(&program) {
                                     res.push((job.id, schedule));
