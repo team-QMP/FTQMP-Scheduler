@@ -32,7 +32,7 @@ fn main() -> Result<()> {
         SchedulerKind::LP => Box::new(LPScheduler::new(config.clone())),
     };
 
-    let mut simulator = Simulator::new(config, generator, scheduler);
+    let simulator = Simulator::new(config, generator, scheduler);
 
     let result = simulator.run()?;
 

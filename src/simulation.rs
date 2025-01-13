@@ -77,12 +77,12 @@ impl Simulator {
                 .div_ceil(self.config.micro_sec_per_cycle.into())
                 as u64;
 
-            let mut min_z = u64::MAX;
+            let mut scheduled_point = u64::MAX;
             for (job_id, schedule) in issued_programs {
                 if (schedule.z as u64) < self.env.program_counter() {
                     return Err(QMPError::ViolateTimingConstraint.into());
                 }
-                min_z = u64::min(min_z, schedule.z as u64);
+                scheduled_point = u64::min(scheduled_point, schedule.z as u64);
                 let job = self
                     .job_que
                     .get(&job_id)
@@ -97,10 +97,10 @@ impl Simulator {
 
             self.current_cycle += elapsed_cycles;
             // When the program point specified by the scheduler (= minimum z position of schedules) is reached, program execution is stopped until the result is returned.
-            let count_to_scheduled_point = min_z - self.env.program_counter();
+            let count_to_scheduled_point = scheduled_point - self.env.program_counter();
             if count_to_scheduled_point < elapsed_cycles {
                 self.delays
-                    .push((min_z, elapsed_cycles - count_to_scheduled_point));
+                    .push((scheduled_point, elapsed_cycles - count_to_scheduled_point));
                 self.env.incr_pc(count_to_scheduled_point);
             } else {
                 self.env.incr_pc(elapsed_cycles);
