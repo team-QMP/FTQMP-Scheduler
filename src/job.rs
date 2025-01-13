@@ -7,15 +7,15 @@ pub type JobID = u32;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Job {
     pub id: JobID,
-    pub added_time: u128,
+    pub requested_time: u64,
     pub program: Program,
 }
 
 impl Job {
-    pub fn new(id: JobID, added_time: u128, program: Program) -> Self {
+    pub fn new(id: JobID, requested_time: u64, program: Program) -> Self {
         Job {
             id,
-            added_time,
+            requested_time,
             program,
         }
     }
@@ -23,7 +23,7 @@ impl Job {
 
 impl Ord for Job {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.added_time.cmp(&self.added_time)
+        other.requested_time.cmp(&self.requested_time)
     }
 }
 

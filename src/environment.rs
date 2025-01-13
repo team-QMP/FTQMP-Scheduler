@@ -2,21 +2,27 @@ use crate::program::{is_overlap, Program, ProgramFormat};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    programs: Vec<Program>,
+    issued_programs: Vec<Program>,
     size_x: i32,
     size_y: i32,
+    /// The maximum z position of issued programs + 1.
+    end_cycle: u64,
+    /// The program counter (i.e., $z$ position) currently executing
+    program_counter: u64,
 }
 
 impl Environment {
     pub fn new(size_x: i32, size_y: i32) -> Self {
         Self {
-            programs: Vec::new(),
+            issued_programs: Vec::new(),
             size_x,
             size_y,
+            end_cycle: 0,
+            program_counter: 0,
         }
     }
 
-    pub fn insert_program(&mut self, p: &Program) -> bool {
+    pub fn issue_program(&mut self, p: &Program) -> bool {
         let is_in_range = match p.format() {
             ProgramFormat::Polycube(polycube) => polycube.blocks().iter().all(|b| {
                 0 <= b.x && b.x < self.size_x && 0 <= b.y && b.y < self.size_y && 0 <= b.z
@@ -30,16 +36,39 @@ impl Environment {
                     && 0 <= pos.z
             }
         };
-        let is_overlap = self.programs.iter().any(|p2| is_overlap(p, p2));
+        let is_overlap = self.issued_programs.iter().any(|p2| is_overlap(p, p2));
         let can_insert = is_in_range && !is_overlap;
         if can_insert {
-            self.programs.push(p.clone());
+            self.issued_programs.push(p.clone());
+            match p.format() {
+                ProgramFormat::Polycube(p) => {
+                    for b in p.blocks() {
+                        self.end_cycle = u64::max(self.end_cycle, b.z as u64 + 1);
+                    }
+                }
+                ProgramFormat::Cuboid(c) => {
+                    self.end_cycle =
+                        u64::max(self.end_cycle, c.pos().z as u64 + c.size_z() as u64 + 1);
+                }
+            }
         }
         can_insert
     }
 
-    pub fn programs(&self) -> &Vec<Program> {
-        &self.programs
+    pub fn issued_programs(&self) -> &Vec<Program> {
+        &self.issued_programs
+    }
+
+    pub fn end_cycle(&self) -> u64 {
+        self.end_cycle
+    }
+
+    pub fn program_counter(&self) -> u64 {
+        self.program_counter
+    }
+
+    pub fn incr_pc(&mut self, count: u64) {
+        self.program_counter += count;
     }
 }
 
@@ -62,11 +91,11 @@ mod test {
             Coordinate::new(0, 0, 0),
         ])));
 
-        assert!(env.insert_program(&p1));
-        assert!(env.insert_program(&p2));
-        assert!(!env.insert_program(&p3));
+        assert!(env.issue_program(&p1));
+        assert!(env.issue_program(&p2));
+        assert!(!env.issue_program(&p3));
 
         let expected = vec![p1, p2];
-        assert_eq!(env.programs(), &expected);
+        assert_eq!(env.issued_programs(), &expected);
     }
 }

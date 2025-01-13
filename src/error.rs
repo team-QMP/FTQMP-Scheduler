@@ -9,6 +9,8 @@ pub enum QMPError {
     InvalidJobID(JobID),
     #[error("Invalid schedule (job = {job:?}, schedule = {schedule:?})")]
     InvalidSchedule { job: Job, schedule: Schedule },
+    #[error("Violate timing constraint")]
+    ViolateTimingConstraint,
 }
 
 impl QMPError {
