@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
-use crate::scheduler::SchedulerKind;
 use crate::generator::GeneratorKind;
+use crate::scheduler::SchedulerKind;
 
 /// TODO: Support non-rectangle chip?
 #[derive(Debug, Clone, Serialize, Deserialize)]

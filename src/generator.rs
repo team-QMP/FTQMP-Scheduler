@@ -3,7 +3,7 @@ pub mod test_generator;
 pub use test_generator::TestGenerator;
 
 use crate::program::Program;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, clap::ValueEnum)]
 #[serde(rename_all = "lowercase")]

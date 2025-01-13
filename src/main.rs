@@ -5,7 +5,7 @@ use anyhow::Result;
 
 use qmp_scheduler::config::SimulationConfig;
 use qmp_scheduler::generator::{GeneratorKind, TestGenerator};
-use qmp_scheduler::scheduler::{SchedulerKind, GreedyScheduler, LPScheduler, Scheduler};
+use qmp_scheduler::scheduler::{GreedyScheduler, LPScheduler, Scheduler, SchedulerKind};
 use qmp_scheduler::simulation::Simulator;
 
 #[derive(Parser, Debug)]
