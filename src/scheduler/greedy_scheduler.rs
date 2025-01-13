@@ -36,8 +36,7 @@ impl Scheduler for GreedyScheduler {
                     for dy in 0..self.config.size_y {
                         for f in [0, 1] {
                             for rot in 0..3 {
-                                let schedule =
-                                    Schedule::new(dx as i32, dy as i32, dz, rot, f == 1);
+                                let schedule = Schedule::new(dx as i32, dy as i32, dz, rot, f == 1);
                                 let program = apply_schedule(&job.program, &schedule);
                                 if self.env.insert_program(&program) {
                                     res.push((job.id, schedule));
