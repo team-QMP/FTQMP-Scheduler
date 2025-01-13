@@ -58,9 +58,15 @@ impl Simulator {
             self.future_job_que.push(Job::new(job_id, t, program));
         }
 
-        let mut result = Vec::new(); // TODO
+        let mut result = Vec::new();
 
         while !self.job_que.is_empty() || !self.future_job_que.is_empty() {
+            if self.future_job_que.peek().unwrap().requested_time > self.current_cycle {
+                let forward_cycles =
+                    self.future_job_que.peek().unwrap().requested_time - self.current_cycle;
+                self.current_cycle += forward_cycles;
+                self.env.incr_pc(forward_cycles);
+            }
             while !self.future_job_que.is_empty()
                 && self.future_job_que.peek().unwrap().requested_time <= self.current_cycle
             {
@@ -106,6 +112,9 @@ impl Simulator {
                 self.env.incr_pc(elapsed_cycles);
             }
         }
+
+        // Consume remaining program execution
+        self.current_cycle += self.env.end_cycle() - self.env.program_counter();
 
         Ok(SimulationResult {
             programs: result,

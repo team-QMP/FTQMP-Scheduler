@@ -5,8 +5,8 @@ pub struct Environment {
     issued_programs: Vec<Program>,
     size_x: i32,
     size_y: i32,
-    /// The maximum z position of issued programs.
-    max_z: u64,
+    /// The maximum z position of issued programs + 1.
+    end_cycle: u64,
     /// The program counter (i.e., $z$ position) currently executing
     program_counter: u64,
 }
@@ -17,7 +17,7 @@ impl Environment {
             issued_programs: Vec::new(),
             size_x,
             size_y,
-            max_z: 0,
+            end_cycle: 0,
             program_counter: 0,
         }
     }
@@ -43,11 +43,12 @@ impl Environment {
             match p.format() {
                 ProgramFormat::Polycube(p) => {
                     for b in p.blocks() {
-                        self.max_z = u64::max(self.max_z, b.z as u64);
+                        self.end_cycle = u64::max(self.end_cycle, b.z as u64 + 1);
                     }
                 }
                 ProgramFormat::Cuboid(c) => {
-                    self.max_z = u64::max(self.max_z, c.pos().z as u64 + c.size_z() as u64)
+                    self.end_cycle =
+                        u64::max(self.end_cycle, c.pos().z as u64 + c.size_z() as u64 + 1);
                 }
             }
         }
@@ -58,8 +59,8 @@ impl Environment {
         &self.issued_programs
     }
 
-    pub fn max_z(&self) -> u64 {
-        self.max_z
+    pub fn end_cycle(&self) -> u64 {
+        self.end_cycle
     }
 
     pub fn program_counter(&self) -> u64 {

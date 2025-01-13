@@ -385,14 +385,17 @@ impl Scheduler for LPScheduler {
         // position by the maximum z point of issued programs.
         let schedules: Vec<_> = schedules
             .into_iter()
-            .map(|s| Schedule::new(s.x, s.y, s.z + env.max_z() as i32, s.rotate, s.flip))
+            .map(|s| Schedule::new(s.x, s.y, s.z + env.end_cycle() as i32, s.rotate, s.flip))
             .collect();
 
-        self.job_list
+        let result = self
+            .job_list
             .iter()
             .map(|job| job.id)
             .zip(schedules)
-            .collect()
+            .collect();
+        self.job_list.clear();
+        result
     }
 }
 
