@@ -24,14 +24,11 @@ struct Args {
 fn main() -> Result<()> {
     use std::io::prelude::Write;
 
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info");
-    }
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
 
-    tracing::info!("Loading config file: {:?}", args.config_path);
+    tracing::info!("Loading config file {:?}", args.config_path);
     let config = SimulationConfig::from_toml(args.config_path.clone())?;
 
     tracing::info!("Loading dataset from {:?}", args.dataset_file);
