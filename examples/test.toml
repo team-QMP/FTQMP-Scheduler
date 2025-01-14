@@ -9,6 +9,6 @@ kind = "test"
 processes = ["convert-to-cuboid"]
 
 [scheduler]
-kind = "lp"
+kind = "greedy"
 time_limit = 60
 batch_size = 3
