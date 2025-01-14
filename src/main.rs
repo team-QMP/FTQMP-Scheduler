@@ -24,16 +24,28 @@ struct Args {
 fn main() -> Result<()> {
     use std::io::prelude::Write;
 
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info");
+    }
+    tracing_subscriber::fmt::init();
+
     let args = Args::parse();
 
+    tracing::info!("Loading config file: {:?}", args.config_path);
     let config = SimulationConfig::from_toml(args.config_path.clone())?;
+
+    tracing::info!("Loading dataset from {:?}", args.dataset_file);
     let dataset = Dataset::from_json_file(args.dataset_file)?;
+
+    tracing::info!("Configure the scheduler: {:?}", config.scheduler.kind);
     let scheduler: Box<dyn Scheduler> = match config.scheduler.kind {
         SchedulerKind::Greedy => Box::new(GreedyScheduler::new(config.clone())),
         SchedulerKind::LP => Box::new(LPScheduler::new(config.clone())),
     };
 
+    tracing::info!("Start simulation");
     let simulator = Simulator::new(config, dataset, scheduler);
+    tracing::info!("Simulation finished");
 
     let result = simulator.run()?;
 

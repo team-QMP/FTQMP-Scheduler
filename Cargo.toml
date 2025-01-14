@@ -14,6 +14,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_tuple = "1.1.0"
 toml = "0.8.19"
+tracing = "0.1"
+tracing-subscriber = "0.3"
 #qhull = "0.3.1"
 qhull = { git = "https://github.com/LucaCiucci/qhull-rs" }
 nalgebra = "0.32"
