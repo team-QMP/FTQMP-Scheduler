@@ -22,8 +22,9 @@ pub struct Simulator {
     env: Environment,
     generator: Box<dyn ProgramGenerator>,
     scheduler: Box<dyn Scheduler>,
-    job_que: BTreeMap<u32, Job>,
-    future_job_que: BinaryHeap<Job>,
+    job_que: BinaryHeap<Job>,
+    /// The requested but not scheduled job list
+    waiting_jobs: BTreeMap<u32, Job>,
     job_counter: u32,
     /// The number of cycles elapsed since the start of the simulation.
     current_cycle: u64,
@@ -42,8 +43,8 @@ impl Simulator {
             config,
             generator,
             scheduler,
-            job_que: BTreeMap::new(),
-            future_job_que: BinaryHeap::new(),
+            job_que: BinaryHeap::new(),
+            waiting_jobs: BTreeMap::new(),
             job_counter: 0,
             current_cycle: 0,
             delays: Vec::new(),
@@ -53,24 +54,27 @@ impl Simulator {
     pub fn run(mut self) -> Result<SimulationResult> {
         for (t, program) in self.generator.generate() {
             let job_id = self.fresh_job_id();
-            self.job_que
-                .insert(job_id, Job::new(job_id, t, program.clone()));
-            self.future_job_que.push(Job::new(job_id, t, program));
+            self.job_que.push(Job::new(job_id, t, program));
         }
 
         let mut result = Vec::new();
 
-        while !self.job_que.is_empty() || !self.future_job_que.is_empty() {
-            if self.future_job_que.peek().unwrap().requested_time > self.current_cycle {
+        while !self.job_que.is_empty() || !self.waiting_jobs.is_empty() {
+            // When the scheduler does not have jobs to be scheduled and there is a job in the job queue,
+            // then change the current cycle to the time when the new job is requested.
+            if self.waiting_jobs.is_empty() && !self.job_que.is_empty()
+                && self.job_que.peek().unwrap().requested_time > self.current_cycle {
                 let forward_cycles =
-                    self.future_job_que.peek().unwrap().requested_time - self.current_cycle;
+                    self.job_que.peek().unwrap().requested_time - self.current_cycle;
                 self.current_cycle += forward_cycles;
                 self.env.incr_pc(forward_cycles);
             }
-            while !self.future_job_que.is_empty()
-                && self.future_job_que.peek().unwrap().requested_time <= self.current_cycle
+
+            while !self.job_que.is_empty()
+                && self.job_que.peek().unwrap().requested_time <= self.current_cycle
             {
-                let job = self.future_job_que.pop().unwrap();
+                let job = self.job_que.pop().unwrap();
+                self.waiting_jobs.insert(job.id, job.clone());
                 self.scheduler.add_job(job);
             }
 
@@ -90,7 +94,7 @@ impl Simulator {
                 }
                 scheduled_point = u64::min(scheduled_point, schedule.z as u64);
                 let job = self
-                    .job_que
+                    .waiting_jobs
                     .get(&job_id)
                     .ok_or_else(|| QMPError::invalid_job_id(job_id))?;
                 let scheduled_program = apply_schedule(&job.program, &schedule);
@@ -98,7 +102,7 @@ impl Simulator {
                     return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
                 }
                 result.push(scheduled_program);
-                self.job_que.remove(&job_id);
+                self.waiting_jobs.remove(&job_id);
             }
 
             self.current_cycle += elapsed_cycles;

@@ -51,7 +51,7 @@ pub mod test {
         assert!(config.micro_sec_per_cycle == 100);
         assert!(config.scheduler.kind == SchedulerKind::Greedy);
         assert!(config.scheduler.time_limit == Some(60));
-        assert!(config.scheduler.batch_size == Some(10));
+        assert!(config.scheduler.batch_size == Some(3));
         assert!(config.generator.kind == GeneratorKind::Test);
     }
 }
