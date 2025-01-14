@@ -42,8 +42,4 @@ impl ProgramGenerator for TestGenerator {
             .map(|_| (0, Program::new(format.clone())))
             .collect()
     }
-
-    fn generate_one(&self) -> Program {
-        unimplemented!()
-    }
 }

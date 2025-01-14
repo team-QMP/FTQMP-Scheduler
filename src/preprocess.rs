@@ -1,9 +1,25 @@
+pub mod convert_to_cuboid;
+
+pub use convert_to_cuboid::ConvertToCuboid;
+
 use nalgebra::Vector3;
 use qhull::Qh;
 use rand::Rng;
 use std::f64;
 
-use crate::program::Polycube;
+use serde::{Deserialize, Serialize};
+
+use crate::program::{Polycube, Program};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PreprocessKind {
+    #[serde(rename = "convert-to-cuboid")]
+    ConvertToCuboid,
+}
+
+pub trait Preprocessor {
+    fn process(&self, program: Program) -> Program;
+}
 
 pub struct FloatCoordinate {
     x: f64,
@@ -210,12 +226,12 @@ fn convex_hull_to_minimal_enclosing_box(
 #[cfg(test)]
 pub mod test {
     // create random polycube
-    use crate::preprocessing::convex_hull_to_minimal_enclosing_box;
-    use crate::preprocessing::create_random_floatcoordinates;
-    use crate::preprocessing::float_coordinates_to_convexhull;
-    use crate::preprocessing::polycube_to_cuboid;
-    use crate::preprocessing::polycube_to_float_coordinates;
-    use crate::preprocessing::print_floatcoordinates;
+    use crate::preprocess::convex_hull_to_minimal_enclosing_box;
+    use crate::preprocess::create_random_floatcoordinates;
+    use crate::preprocess::float_coordinates_to_convexhull;
+    use crate::preprocess::polycube_to_cuboid;
+    use crate::preprocess::polycube_to_float_coordinates;
+    use crate::preprocess::print_floatcoordinates;
     use crate::program::polycube::create_random_polycube;
     use nalgebra::Vector3;
 

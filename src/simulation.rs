@@ -8,6 +8,7 @@ use crate::environment::Environment;
 use crate::error::QMPError;
 use crate::generator::ProgramGenerator;
 use crate::job::Job;
+use crate::preprocess::{ConvertToCuboid, PreprocessKind, Preprocessor};
 use crate::program::Program;
 use crate::scheduler::{apply_schedule, Scheduler};
 
@@ -52,8 +53,18 @@ impl Simulator {
     }
 
     pub fn run(mut self) -> Result<SimulationResult> {
+        let preprocessors: Vec<_> = self
+            .config
+            .preprocessor
+            .processes
+            .iter()
+            .map(|kind| match kind {
+                PreprocessKind::ConvertToCuboid => ConvertToCuboid {},
+            })
+            .collect();
         for (t, program) in self.generator.generate() {
             let job_id = self.fresh_job_id();
+            let program = preprocessors.iter().fold(program, |p, pp| pp.process(p));
             self.job_que.push(Job::new(job_id, t, program));
         }
 
