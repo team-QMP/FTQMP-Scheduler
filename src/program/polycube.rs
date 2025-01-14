@@ -3,8 +3,9 @@ use std::io::Write;
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use serde_tuple::{Serialize_tuple, Deserialize_tuple};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize_tuple, Serialize_tuple)]
 pub struct Coordinate {
     pub x: i32,
     pub y: i32,
@@ -36,7 +37,7 @@ impl<const N: usize> From<&[(i32, i32, i32); N]> for Polycube {
     fn from(item: &[(i32, i32, i32); N]) -> Self {
         let mut blocks = Vec::new();
         for pos in item {
-            blocks.push(Coordinate::from(pos.clone()));
+            blocks.push(Coordinate::from(*pos));
         }
         Polycube::new(blocks)
     }
@@ -57,17 +58,13 @@ impl Polycube {
     }
 
     pub fn size(&self) -> i32 {
-        let size: i32 = self.blocks.len() as i32;
-        return size;
+        self.blocks.len() as i32
     }
 
     pub fn index_to_xyz(&self, index: i32) -> Coordinate {
-        let x = self.blocks[index as usize].x;
-        let y = self.blocks[index as usize].y;
-        let z = self.blocks[index as usize].z;
-        let coordinate: Coordinate = Coordinate::new(x, y, z);
-        return coordinate;
+        self.blocks[index as usize].clone()
     }
+
     pub fn print(&self) {
         for i in 0..self.size() {
             let coordinate = self.index_to_xyz(i);
