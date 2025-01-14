@@ -14,6 +14,7 @@ pub enum ProgramFormat {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Program {
+    #[serde(flatten)]
     format: ProgramFormat,
 }
 
