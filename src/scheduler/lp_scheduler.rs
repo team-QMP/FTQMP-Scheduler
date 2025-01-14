@@ -384,14 +384,8 @@ impl Scheduler for LPScheduler {
             .map(|s| Schedule::new(s.x, s.y, s.z + env.end_cycle() as i32, s.rotate, s.flip))
             .collect();
 
-        jobs
-            .into_iter()
-            .map(|job| job.id)
-            .zip(schedules)
-            .collect()
+        jobs.into_iter().map(|job| job.id).zip(schedules).collect()
     }
-
-    
 }
 
 impl LPScheduler {
@@ -401,7 +395,7 @@ impl LPScheduler {
         } else {
             self.job_list.len()
         };
-        let mut taken_jobs= self.job_list.split_off(take_len);
+        let mut taken_jobs = self.job_list.split_off(take_len);
         std::mem::swap(&mut taken_jobs, &mut self.job_list);
         taken_jobs.into()
     }

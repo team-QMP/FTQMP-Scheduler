@@ -61,7 +61,7 @@ impl GreedyScheduler {
         } else {
             self.job_list.len()
         };
-        let mut taken_jobs= self.job_list.split_off(take_len);
+        let mut taken_jobs = self.job_list.split_off(take_len);
         std::mem::swap(&mut taken_jobs, &mut self.job_list);
         taken_jobs.into()
     }

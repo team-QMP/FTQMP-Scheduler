@@ -62,8 +62,10 @@ impl Simulator {
         while !self.job_que.is_empty() || !self.waiting_jobs.is_empty() {
             // When the scheduler does not have jobs to be scheduled and there is a job in the job queue,
             // then change the current cycle to the time when the new job is requested.
-            if self.waiting_jobs.is_empty() && !self.job_que.is_empty()
-                && self.job_que.peek().unwrap().requested_time > self.current_cycle {
+            if self.waiting_jobs.is_empty()
+                && !self.job_que.is_empty()
+                && self.job_que.peek().unwrap().requested_time > self.current_cycle
+            {
                 let forward_cycles =
                     self.job_que.peek().unwrap().requested_time - self.current_cycle;
                 self.current_cycle += forward_cycles;
