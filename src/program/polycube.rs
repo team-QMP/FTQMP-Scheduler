@@ -3,9 +3,11 @@ use std::io::Write;
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use serde_tuple::{Serialize_tuple, Deserialize_tuple};
+use serde_tuple::{Deserialize_tuple, Serialize_tuple};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize_tuple, Serialize_tuple)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize_tuple, Serialize_tuple,
+)]
 pub struct Coordinate {
     pub x: i32,
     pub y: i32,

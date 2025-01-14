@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use serde::{Serialize, Deserialize};
 
 use crate::program::Program;
 
@@ -26,7 +26,8 @@ impl Dataset {
     }
 
     pub fn requests(&self) -> Vec<(u64, &Program)> {
-        self.job_requests.iter()
+        self.job_requests
+            .iter()
             .map(|&(t, id)| (t, &self.programs[id as usize]))
             .collect()
     }

@@ -7,7 +7,7 @@ use crate::config::SimulationConfig;
 use crate::dataset::Dataset;
 use crate::environment::Environment;
 use crate::error::QMPError;
-use crate::job::{JobID, Job};
+use crate::job::{Job, JobID};
 use crate::preprocess::{ConvertToCuboid, PreprocessKind, Preprocessor};
 use crate::program::Program;
 use crate::scheduler::{apply_schedule, Scheduler};
@@ -32,11 +32,7 @@ pub struct Simulator {
 }
 
 impl Simulator {
-    pub fn new(
-        config: SimulationConfig,
-        dataset: Dataset,
-        scheduler: Box<dyn Scheduler>,
-    ) -> Self {
+    pub fn new(config: SimulationConfig, dataset: Dataset, scheduler: Box<dyn Scheduler>) -> Self {
         let preprocessors: Vec<_> = config
             .preprocessor
             .processes
@@ -45,11 +41,17 @@ impl Simulator {
                 PreprocessKind::ConvertToCuboid => ConvertToCuboid {},
             })
             .collect();
-        let job_que: BinaryHeap<_> = dataset.requests()
-            .into_iter().enumerate().map(|(i, (t, program))| {
-                let program = preprocessors.iter().fold(program.clone(), |p, pp| pp.process(p));
+        let job_que: BinaryHeap<_> = dataset
+            .requests()
+            .into_iter()
+            .enumerate()
+            .map(|(i, (t, program))| {
+                let program = preprocessors
+                    .iter()
+                    .fold(program.clone(), |p, pp| pp.process(p));
                 Job::new(i as JobID, t, program)
-            }).collect();
+            })
+            .collect();
 
         Self {
             env: Environment::new(config.size_x as i32, config.size_y as i32),
