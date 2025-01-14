@@ -2,7 +2,6 @@ pub mod config;
 pub mod dataset;
 pub mod environment;
 pub mod error;
-pub mod generator;
 pub mod job;
 pub mod preprocess;
 pub mod program;

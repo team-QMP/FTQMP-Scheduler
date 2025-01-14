@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 
 use qmp_scheduler::config::SimulationConfig;
-use qmp_scheduler::generator::{GeneratorKind, TestGenerator};
+use qmp_scheduler::dataset::Dataset;
 use qmp_scheduler::scheduler::{GreedyScheduler, LPScheduler, Scheduler, SchedulerKind};
 use qmp_scheduler::simulation::Simulator;
 
@@ -16,6 +16,9 @@ struct Args {
 
     #[arg(short, long, default_value = "result.json")]
     output_file: PathBuf,
+
+    #[arg(short, long)]
+    dataset_file: PathBuf,
 }
 
 fn main() -> Result<()> {
@@ -24,15 +27,13 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let config = SimulationConfig::from_toml(args.config_path.clone())?;
-    let generator = match config.generator.kind {
-        GeneratorKind::Test => Box::new(TestGenerator::new()),
-    };
+    let dataset = Dataset::from_json_file(args.dataset_file)?;
     let scheduler: Box<dyn Scheduler> = match config.scheduler.kind {
         SchedulerKind::Greedy => Box::new(GreedyScheduler::new(config.clone())),
         SchedulerKind::LP => Box::new(LPScheduler::new(config.clone())),
     };
 
-    let simulator = Simulator::new(config, generator, scheduler);
+    let simulator = Simulator::new(config, dataset, scheduler);
 
     let result = simulator.run()?;
 
