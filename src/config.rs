@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::generator::GeneratorKind;
+use crate::preprocess::PreprocessKind;
 use crate::scheduler::SchedulerKind;
 
 /// TODO: Support non-rectangle chip?
@@ -12,6 +13,7 @@ pub struct SimulationConfig {
     pub size_y: u32,
     pub micro_sec_per_cycle: u64,
     pub generator: GeneratorConfig,
+    pub preprocessor: PreprocessorConfig,
     pub scheduler: SchedulerConfig,
 }
 
@@ -25,6 +27,11 @@ pub struct SchedulerConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneratorConfig {
     pub kind: GeneratorKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PreprocessorConfig {
+    pub processes: Vec<PreprocessKind>,
 }
 
 impl SimulationConfig {

@@ -5,6 +5,9 @@ micro_sec_per_cycle = 100
 [generator]
 kind = "test"
 
+[preprocessor]
+processes = ["convert-to-cuboid"]
+
 [scheduler]
 kind = "greedy"
 time_limit = 60
