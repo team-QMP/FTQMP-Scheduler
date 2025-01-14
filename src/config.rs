@@ -2,7 +2,6 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::generator::GeneratorKind;
 use crate::preprocess::PreprocessKind;
 use crate::scheduler::SchedulerKind;
 
@@ -12,7 +11,6 @@ pub struct SimulationConfig {
     pub size_x: u32,
     pub size_y: u32,
     pub micro_sec_per_cycle: u64,
-    pub generator: GeneratorConfig,
     pub preprocessor: PreprocessorConfig,
     pub scheduler: SchedulerConfig,
 }
@@ -22,11 +20,6 @@ pub struct SchedulerConfig {
     pub kind: SchedulerKind,
     pub time_limit: Option<u32>,
     pub batch_size: Option<u32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GeneratorConfig {
-    pub kind: GeneratorKind,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,7 +38,6 @@ impl SimulationConfig {
 #[cfg(test)]
 pub mod test {
     use crate::config::SimulationConfig;
-    use crate::generator::GeneratorKind;
     use crate::scheduler::SchedulerKind;
     use std::path::PathBuf;
 
@@ -59,6 +51,5 @@ pub mod test {
         assert!(config.scheduler.kind == SchedulerKind::Greedy);
         assert!(config.scheduler.time_limit == Some(60));
         assert!(config.scheduler.batch_size == Some(3));
-        assert!(config.generator.kind == GeneratorKind::Test);
     }
 }

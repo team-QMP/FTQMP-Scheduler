@@ -4,10 +4,10 @@ use std::collections::{BTreeMap, BinaryHeap};
 use std::time::Instant;
 
 use crate::config::SimulationConfig;
+use crate::dataset::Dataset;
 use crate::environment::Environment;
 use crate::error::QMPError;
-use crate::generator::ProgramGenerator;
-use crate::job::Job;
+use crate::job::{Job, JobID};
 use crate::preprocess::{ConvertToCuboid, PreprocessKind, Preprocessor};
 use crate::program::Program;
 use crate::scheduler::{apply_schedule, Scheduler};
@@ -21,12 +21,10 @@ pub struct SimulationResult {
 pub struct Simulator {
     config: SimulationConfig,
     env: Environment,
-    generator: Box<dyn ProgramGenerator>,
     scheduler: Box<dyn Scheduler>,
     job_que: BinaryHeap<Job>,
     /// The requested but not scheduled job list
     waiting_jobs: BTreeMap<u32, Job>,
-    job_counter: u32,
     /// The number of cycles elapsed since the start of the simulation.
     current_cycle: u64,
     /// A delay (s, d) means a delay of $d$ cycles occured in the $s$-th step.
@@ -34,27 +32,8 @@ pub struct Simulator {
 }
 
 impl Simulator {
-    pub fn new(
-        config: SimulationConfig,
-        generator: Box<dyn ProgramGenerator>,
-        scheduler: Box<dyn Scheduler>,
-    ) -> Self {
-        Self {
-            env: Environment::new(config.size_x as i32, config.size_y as i32),
-            config,
-            generator,
-            scheduler,
-            job_que: BinaryHeap::new(),
-            waiting_jobs: BTreeMap::new(),
-            job_counter: 0,
-            current_cycle: 0,
-            delays: Vec::new(),
-        }
-    }
-
-    pub fn run(mut self) -> Result<SimulationResult> {
-        let preprocessors: Vec<_> = self
-            .config
+    pub fn new(config: SimulationConfig, dataset: Dataset, scheduler: Box<dyn Scheduler>) -> Self {
+        let preprocessors: Vec<_> = config
             .preprocessor
             .processes
             .iter()
@@ -62,12 +41,30 @@ impl Simulator {
                 PreprocessKind::ConvertToCuboid => ConvertToCuboid {},
             })
             .collect();
-        for (t, program) in self.generator.generate() {
-            let job_id = self.fresh_job_id();
-            let program = preprocessors.iter().fold(program, |p, pp| pp.process(p));
-            self.job_que.push(Job::new(job_id, t, program));
-        }
+        let job_que: BinaryHeap<_> = dataset
+            .requests()
+            .into_iter()
+            .enumerate()
+            .map(|(i, (t, program))| {
+                let program = preprocessors
+                    .iter()
+                    .fold(program.clone(), |p, pp| pp.process(p));
+                Job::new(i as JobID, t, program)
+            })
+            .collect();
 
+        Self {
+            env: Environment::new(config.size_x as i32, config.size_y as i32),
+            config,
+            scheduler,
+            job_que,
+            waiting_jobs: BTreeMap::new(),
+            current_cycle: 0,
+            delays: Vec::new(),
+        }
+    }
+
+    pub fn run(mut self) -> Result<SimulationResult> {
         let mut result = Vec::new();
 
         while !self.job_que.is_empty() || !self.waiting_jobs.is_empty() {
@@ -137,10 +134,5 @@ impl Simulator {
             programs: result,
             delays: self.delays,
         })
-    }
-
-    fn fresh_job_id(&mut self) -> u32 {
-        self.job_counter += 1;
-        self.job_counter - 1
     }
 }
