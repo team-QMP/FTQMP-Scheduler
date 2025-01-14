@@ -8,3 +8,4 @@ kind = "test"
 [scheduler]
 kind = "greedy"
 time_limit = 60
+batch_size = 3

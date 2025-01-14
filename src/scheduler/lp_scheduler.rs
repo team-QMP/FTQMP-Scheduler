@@ -363,18 +363,14 @@ impl Scheduler for LPScheduler {
             size_y: self.config.size_y,
             size_z: worst_zsum,
         };
-        // TODO: Batch processing
-        let programs: Vec<_> = self
-            .job_list
-            .iter()
-            .map(|job| job.program.clone())
-            .collect();
-        let problem = if programs.iter().all(|p| p.is_polycube()) {
+        let jobs = self.take_jobs_by_batch_size();
+        let problem = if jobs.iter().all(|job| job.program.is_polycube()) {
+            let programs = jobs.iter().map(|job| job.program.clone()).collect();
             PackingProblem::Polycube(PolycubePackingProblem::new(pack_cfg, programs))
-        } else if programs.iter().all(|p| p.is_cuboid()) {
-            let cuboids = programs
-                .into_iter()
-                .map(|p| p.cuboid().unwrap().clone())
+        } else if jobs.iter().all(|job| job.program.is_cuboid()) {
+            let cuboids = jobs
+                .iter()
+                .map(|p| p.program.cuboid().unwrap().clone())
                 .collect();
             PackingProblem::Cuboid(CuboidPackingProblem::new(pack_cfg, cuboids))
         } else {
@@ -388,14 +384,20 @@ impl Scheduler for LPScheduler {
             .map(|s| Schedule::new(s.x, s.y, s.z + env.end_cycle() as i32, s.rotate, s.flip))
             .collect();
 
-        let result = self
-            .job_list
-            .iter()
-            .map(|job| job.id)
-            .zip(schedules)
-            .collect();
-        self.job_list.clear();
-        result
+        jobs.into_iter().map(|job| job.id).zip(schedules).collect()
+    }
+}
+
+impl LPScheduler {
+    fn take_jobs_by_batch_size(&mut self) -> Vec<Job> {
+        let take_len = if let Some(batch_size) = self.config.scheduler.batch_size {
+            usize::min(self.job_list.len(), batch_size as usize)
+        } else {
+            self.job_list.len()
+        };
+        let mut taken_jobs = self.job_list.split_off(take_len);
+        std::mem::swap(&mut taken_jobs, &mut self.job_list);
+        taken_jobs.into()
     }
 }
 

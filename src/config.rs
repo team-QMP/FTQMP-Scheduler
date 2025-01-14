@@ -19,6 +19,7 @@ pub struct SimulationConfig {
 pub struct SchedulerConfig {
     pub kind: SchedulerKind,
     pub time_limit: Option<u32>,
+    pub batch_size: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +51,7 @@ pub mod test {
         assert!(config.micro_sec_per_cycle == 100);
         assert!(config.scheduler.kind == SchedulerKind::Greedy);
         assert!(config.scheduler.time_limit == Some(60));
+        assert!(config.scheduler.batch_size == Some(3));
         assert!(config.generator.kind == GeneratorKind::Test);
     }
 }

@@ -28,8 +28,7 @@ impl Scheduler for GreedyScheduler {
 
     fn run(&mut self, env: &Environment) -> Vec<(JobID, Schedule)> {
         let mut res = Vec::new();
-        while !self.job_list.is_empty() {
-            let job = self.job_list.pop_front().unwrap();
+        for job in self.take_jobs_by_batch_size() {
             let mut dz = env.program_counter();
             'top: loop {
                 for dx in 0..self.config.size_x {
@@ -52,5 +51,18 @@ impl Scheduler for GreedyScheduler {
         }
 
         res
+    }
+}
+
+impl GreedyScheduler {
+    fn take_jobs_by_batch_size(&mut self) -> Vec<Job> {
+        let take_len = if let Some(batch_size) = self.config.scheduler.batch_size {
+            usize::min(self.job_list.len(), batch_size as usize)
+        } else {
+            self.job_list.len()
+        };
+        let mut taken_jobs = self.job_list.split_off(take_len);
+        std::mem::swap(&mut taken_jobs, &mut self.job_list);
+        taken_jobs.into()
     }
 }
