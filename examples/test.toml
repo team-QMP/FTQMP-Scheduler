@@ -6,6 +6,6 @@ micro_sec_per_cycle = 100
 kind = "test"
 
 [scheduler]
-kind = "lp"
+kind = "greedy"
 time_limit = 60
 batch_size = 3

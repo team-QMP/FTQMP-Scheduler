@@ -397,7 +397,6 @@ impl Scheduler for LPScheduler {
 impl LPScheduler {
     fn take_jobs_by_batch_size(&mut self) -> Vec<Job> {
         let take_len = if let Some(batch_size) = self.config.scheduler.batch_size {
-            println!("batch_size = {}", batch_size);
             usize::min(self.job_list.len(), batch_size as usize)
         } else {
             self.job_list.len()
