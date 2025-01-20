@@ -69,6 +69,7 @@ impl Environment {
 
     pub fn incr_pc(&mut self, count: u64) {
         self.program_counter += count;
+        self.end_cycle = u64::max(self.end_cycle, self.program_counter);
     }
 }
 
