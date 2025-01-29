@@ -1527,7 +1527,7 @@ dependencies = [
 [[package]]
 name = "qhull"
 version = "0.3.2"
-source = "git+https://github.com/LucaCiucci/qhull-rs#453c15feec94e80c2caae8d5d9c39984737bf1b8"
+source = "git+https://github.com/Suikaba/qhull-rs#e4f971fbdee767b6128b75b31c4bd07948bd3ce3"
 dependencies = [
  "qhull-sys",
 ]
@@ -1535,7 +1535,7 @@ dependencies = [
 [[package]]
 name = "qhull-sys"
 version = "0.3.2"
-source = "git+https://github.com/LucaCiucci/qhull-rs#453c15feec94e80c2caae8d5d9c39984737bf1b8"
+source = "git+https://github.com/Suikaba/qhull-rs#e4f971fbdee767b6128b75b31c4bd07948bd3ce3"
 dependencies = [
  "bindgen",
  "cc",
