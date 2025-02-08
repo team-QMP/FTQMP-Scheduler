@@ -156,17 +156,19 @@ impl PolycubePackingProblem {
 }
 
 /// The specialized LP problem when all programs represented by cuboids.
-/// constant values:
+/// * Constant values:
 ///   * X, Y                = the chip size (constant value)
 ///   * sx[i], sy[i], sz[i] = the size of i-th cuboid
 ///   * Z                   = sum_i sz[i]
-/// variables:
+///   * dx, dy, dz[i][j]    = relative positions of cuboids (if i, j are in the same program)
+/// * Variables:
 ///   * a[i][j] := (x pos of i-th cuboid) > (x pos of j-th cuboid) (binary)
 ///   * b[i][j] := (y pos of i-th cuboid) > (y pos of j-th cuboid) (binary)
 ///   * c[i][j] := (z pos of i-th cuboid) > (z pos of j-th cuboid) (binary)
 ///   * x[i], y[i], z[i] := the position of i-th cuboid
 ///   * v := the objective value
-/// minimize v
+///
+/// Minimize v
 /// s.t.
 ///   * a[i][j] + a[j][i] + b[i][j] + b[j][i] + c[i][j] + c[j][i] >= 1
 ///   * x[i] - x[j] + X * a[i][j] <= X - sx[i] for all i, j
@@ -175,15 +177,19 @@ impl PolycubePackingProblem {
 ///   * x[i] + sx[i] <= X
 ///   * y[i] + sy[i] <= Y
 ///   * z[i] + sz[i] <= Z
+///   * x[i] + dx[i][j] = x[j] (for all i, j in the same program)
+///   * y[i] + dy[i][j] = y[j] (for all i, j in the same program)
+///   * z[i] + dz[i][j] = z[j] (for all i, j in the same program)
 ///   * z[i] + sz[i] <= v
 #[warn(dead_code)]
 struct CuboidPackingProblem {
     config: PackingConfig,
-    n: usize, // #(cuboids)
+    num_cuboids: usize,
+    num_programs: usize,
     vars: ProblemVariables,
-    x: Vec<Variable>,
-    y: Vec<Variable>,
-    z: Vec<Variable>,
+    x: Vec<Vec<Variable>>,
+    y: Vec<Vec<Variable>>,
+    z: Vec<Vec<Variable>>,
     a: Vec<Vec<Option<Variable>>>, // i == j iff None
     b: Vec<Vec<Option<Variable>>>,
     c: Vec<Vec<Option<Variable>>>,
@@ -193,20 +199,35 @@ struct CuboidPackingProblem {
 
 // TODO: Consider rotations
 impl CuboidPackingProblem {
-    /// The positions of all cuboids must be (0, 0, 0)
-    pub fn new(config: PackingConfig, cuboids: Vec<Cuboid>) -> Self {
-        assert!(!cuboids.is_empty());
-        assert!(cuboids
-            .iter()
-            .all(|c| { c.pos().x == 0 && c.pos().y == 0 && c.pos().z == 0 }));
+    pub fn new(config: PackingConfig, programs: Vec<Vec<Cuboid>>) -> Self {
+        assert!(!programs.is_empty());
         let mut vars = variables!();
-        let n = cuboids.len();
-        let x: Vec<_> = (0..n).map(|_| vars.add(variable().integer())).collect();
-        let y: Vec<_> = (0..n).map(|_| vars.add(variable().integer())).collect();
-        let z: Vec<_> = (0..n).map(|_| vars.add(variable().integer())).collect();
-        let a: Vec<Vec<_>> = (0..n)
+        let num_programs = programs.len();
+        let num_cuboids = programs.iter().map(|cs| cs.len()).sum();
+        let x = (0..num_programs)
             .map(|i| {
-                (0..n)
+                (0..programs[i].len())
+                    .map(|_| vars.add(variable().integer()))
+                    .collect()
+            })
+            .collect();
+        let y = (0..num_programs)
+            .map(|i| {
+                (0..programs[i].len())
+                    .map(|_| vars.add(variable().integer()))
+                    .collect()
+            })
+            .collect();
+        let z = (0..num_programs)
+            .map(|i| {
+                (0..programs[i].len())
+                    .map(|_| vars.add(variable().integer()))
+                    .collect()
+            })
+            .collect();
+        let a: Vec<Vec<_>> = (0..num_programs)
+            .map(|i| {
+                (0..num_programs)
                     .map(|j| {
                         if i == j {
                             None
@@ -217,9 +238,9 @@ impl CuboidPackingProblem {
                     .collect()
             })
             .collect();
-        let b: Vec<Vec<_>> = (0..n)
+        let b: Vec<Vec<_>> = (0..num_programs)
             .map(|i| {
-                (0..n)
+                (0..num_programs)
                     .map(|j| {
                         if i == j {
                             None
@@ -230,9 +251,9 @@ impl CuboidPackingProblem {
                     .collect()
             })
             .collect();
-        let c: Vec<Vec<_>> = (0..n)
+        let c: Vec<Vec<_>> = (0..num_programs)
             .map(|i| {
-                (0..n)
+                (0..num_programs)
                     .map(|j| {
                         if i == j {
                             None
@@ -247,7 +268,8 @@ impl CuboidPackingProblem {
 
         Self {
             config,
-            n,
+            num_cuboids,
+            num_programs,
             vars,
             x,
             y,
@@ -371,7 +393,7 @@ impl Scheduler for LPScheduler {
         } else if jobs.iter().all(|job| job.program.is_cuboid()) {
             let cuboids = jobs
                 .iter()
-                .map(|p| p.program.cuboid().unwrap()[0].clone()) // TODO
+                .map(|p| p.program.cuboid().unwrap().clone()) // TODO
                 .collect();
             PackingProblem::Cuboid(CuboidPackingProblem::new(pack_cfg, cuboids))
         } else {
@@ -482,11 +504,11 @@ pub mod test {
         let cuboid_1x1x1 = Cuboid::new(Coordinate::new(0, 0, 0), 1, 1, 1);
         let cuboid_1x2x1 = Cuboid::new(Coordinate::new(0, 0, 0), 1, 2, 1);
         let cuboid_1x2x2 = Cuboid::new(Coordinate::new(0, 0, 0), 1, 2, 2);
-        let cuboids = vec![
-            cuboid_1x2x2,
-            cuboid_1x1x1.clone(),
-            cuboid_1x2x1,
-            cuboid_1x1x1,
+        let programs = vec![
+            vec![cuboid_1x2x2],
+            vec![cuboid_1x1x1.clone()],
+            vec![cuboid_1x2x1],
+            vec![cuboid_1x1x1],
         ];
 
         let config = PackingConfig {
@@ -496,25 +518,25 @@ pub mod test {
             size_z: 2,
         };
 
-        let problem = CuboidPackingProblem::new(config.clone(), cuboids.clone());
+        let problem = CuboidPackingProblem::new(config.clone(), programs.clone());
         let schedule = problem.solve();
-        for i in 0..cuboids.len() {
+        for i in 0..programs.len() {
             let xi = schedule[i].x;
             let yi = schedule[i].y;
             let zi = schedule[i].z;
-            let size_xi = cuboids[i].size_x() as i32;
-            let size_yi = cuboids[i].size_y() as i32;
-            let size_zi = cuboids[i].size_z() as i32;
+            let size_xi = programs[i][0].size_x() as i32;
+            let size_yi = programs[i][0].size_y() as i32;
+            let size_zi = programs[i][0].size_z() as i32;
             assert!(0 <= xi && xi + size_xi <= config.size_x as i32);
             assert!(0 <= yi && yi + size_yi <= config.size_y as i32);
             assert!(0 <= zi && zi + size_zi <= config.size_z as i32);
-            for j in i + 1..cuboids.len() {
+            for j in i + 1..programs.len() {
                 let xj = schedule[j].x;
                 let yj = schedule[j].y;
                 let zj = schedule[j].z;
-                let size_xj = cuboids[j].size_x() as i32;
-                let size_yj = cuboids[j].size_y() as i32;
-                let size_zj = cuboids[j].size_z() as i32;
+                let size_xj = programs[j][0].size_x() as i32;
+                let size_yj = programs[j][0].size_y() as i32;
+                let size_zj = programs[j][0].size_z() as i32;
                 let is_overlap_x = !(xi + size_xi <= xj || xj + size_xj <= xi);
                 let is_overlap_y = !(yi + size_yi <= yj || yj + size_yj <= yi);
                 let is_overlap_z = !(zi + size_zi <= zj || zj + size_zj <= zi);
