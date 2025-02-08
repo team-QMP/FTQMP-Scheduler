@@ -352,8 +352,9 @@ impl Scheduler for LPScheduler {
                     p.blocks().iter().map(|c| c.z).max().unwrap() as u32 + 1
                 }
                 ProgramFormat::Cuboid(c) => {
-                    assert!(c.pos().z == 0);
-                    c.size_z() as u32
+                    // TODO
+                    assert!(c[0].pos().z == 0);
+                    c[0].size_z() as u32
                 }
             })
             .sum();
@@ -370,7 +371,7 @@ impl Scheduler for LPScheduler {
         } else if jobs.iter().all(|job| job.program.is_cuboid()) {
             let cuboids = jobs
                 .iter()
-                .map(|p| p.program.cuboid().unwrap().clone())
+                .map(|p| p.program.cuboid().unwrap()[0].clone()) // TODO
                 .collect();
             PackingProblem::Cuboid(CuboidPackingProblem::new(pack_cfg, cuboids))
         } else {

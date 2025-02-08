@@ -33,6 +33,12 @@ impl Coordinate {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Polycube {
     blocks: Vec<Coordinate>,
+    min_x: i32,
+    min_y: i32,
+    max_x: i32,
+    max_y: i32,
+    min_z: i32,
+    max_z: i32,
 }
 
 impl<const N: usize> From<&[(i32, i32, i32); N]> for Polycube {
@@ -47,15 +53,65 @@ impl<const N: usize> From<&[(i32, i32, i32); N]> for Polycube {
 
 impl Polycube {
     pub fn new(blocks: Vec<Coordinate>) -> Self {
-        Self { blocks }
+        let (min_x, max_x, min_y, max_y, min_z, max_z) = blocks.iter().fold(
+            (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
+            |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
+                (
+                    i32::min(min_x, pos.x),
+                    i32::max(max_x, pos.x),
+                    i32::min(min_y, pos.y),
+                    i32::max(max_y, pos.y),
+                    i32::min(min_z, pos.z),
+                    i32::max(max_z, pos.z),
+                )
+            },
+        );
+        Self {
+            blocks,
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+            min_z,
+            max_z,
+        }
     }
 
     pub fn blocks(&self) -> &Vec<Coordinate> {
         &self.blocks
     }
 
+    pub fn min_x(&self) -> i32 {
+        self.min_x
+    }
+
+    pub fn max_x(&self) -> i32 {
+        self.max_x
+    }
+
+    pub fn min_y(&self) -> i32 {
+        self.min_y
+    }
+
+    pub fn max_y(&self) -> i32 {
+        self.max_y
+    }
+
+    pub fn min_z(&self) -> i32 {
+        self.min_z
+    }
+
+    pub fn max_z(&self) -> i32 {
+        self.max_z
+    }
+
     pub fn add_block(&mut self, coord: Coordinate) {
-        // TODO: check
+        self.min_x = i32::min(self.min_x, coord.x);
+        self.min_y = i32::min(self.min_y, coord.y);
+        self.min_z = i32::min(self.min_z, coord.z);
+        self.max_x = i32::max(self.max_x, coord.x);
+        self.max_y = i32::max(self.max_y, coord.y);
+        self.max_z = i32::max(self.max_z, coord.z);
         self.blocks.push(coord);
     }
 

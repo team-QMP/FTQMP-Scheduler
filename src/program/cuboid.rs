@@ -13,24 +13,11 @@ pub struct Cuboid {
 
 impl From<&Polycube> for Cuboid {
     fn from(item: &Polycube) -> Self {
-        let (min_x, max_x, min_y, max_y, min_z, max_z) = item.blocks().iter().fold(
-            (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
-            |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
-                (
-                    i32::min(min_x, pos.x),
-                    i32::max(max_x, pos.x),
-                    i32::min(min_y, pos.y),
-                    i32::max(max_y, pos.y),
-                    i32::min(min_z, pos.z),
-                    i32::max(max_z, pos.z),
-                )
-            },
-        );
         Self {
-            pos: Coordinate::new(min_x, min_y, min_z),
-            size_x: (max_x - min_x + 1) as usize,
-            size_y: (max_y - min_y + 1) as usize,
-            size_z: (max_z - min_z + 1) as usize,
+            pos: Coordinate::new(item.min_x(), item.min_y(), item.min_z()),
+            size_x: (item.max_x() - item.min_x() + 1) as usize,
+            size_y: (item.max_y() - item.min_y() + 1) as usize,
+            size_z: (item.max_z() - item.min_z() + 1) as usize,
             original: Some(item.clone()),
         }
     }
