@@ -73,6 +73,21 @@ pub fn apply_schedule_to_polycube(polycube: &Polycube, schedule: &Schedule) -> P
     Polycube::new(blocks)
 }
 
+fn apply_schedule_to_cuboid(cuboid: &Cuboid, schedule: &Schedule) -> Cuboid {
+    if let Some(polycube) = cuboid.original() {
+        let scheduled_poly = apply_schedule_to_polycube(polycube, schedule);
+        Cuboid::from(&scheduled_poly)
+    } else {
+        let (size_x, size_y) = if schedule.rotate % 2 == 1 {
+            (cuboid.size_y(), cuboid.size_x())
+        } else {
+            (cuboid.size_x(), cuboid.size_y())
+        };
+        let pos = Coordinate::new(schedule.x, schedule.y, schedule.z);
+        Cuboid::new(pos, size_x, size_y, cuboid.size_z())
+    }
+}
+
 pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
     assert!(0 <= schedule.rotate && schedule.rotate < 3);
     match program.format() {
@@ -80,21 +95,12 @@ pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
             let scheduled = apply_schedule_to_polycube(polycube, schedule);
             Program::new(ProgramFormat::Polycube(scheduled))
         }
-        ProgramFormat::Cuboid(cuboid) => {
-            if let Some(polycube) = cuboid.original() {
-                let scheduled_poly = apply_schedule_to_polycube(polycube, schedule);
-                let cuboid = Cuboid::from(&scheduled_poly);
-                Program::new(ProgramFormat::Cuboid(cuboid))
-            } else {
-                let (size_x, size_y) = if schedule.rotate % 2 == 1 {
-                    (cuboid.size_y(), cuboid.size_x())
-                } else {
-                    (cuboid.size_x(), cuboid.size_y())
-                };
-                let pos = Coordinate::new(schedule.x, schedule.y, schedule.z);
-                let cuboid = Cuboid::new(pos, size_x, size_y, cuboid.size_z());
-                Program::new(ProgramFormat::Cuboid(cuboid))
-            }
+        ProgramFormat::Cuboid(cuboids) => {
+            let cuboids = cuboids
+                .iter()
+                .map(|c| apply_schedule_to_cuboid(c, schedule))
+                .collect();
+            Program::new(ProgramFormat::Cuboid(cuboids))
         }
     }
 }

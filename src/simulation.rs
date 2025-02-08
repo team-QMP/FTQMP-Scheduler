@@ -39,7 +39,7 @@ impl Simulator {
             .processes
             .iter()
             .map(|kind| match kind {
-                PreprocessKind::ConvertToCuboid => ConvertToCuboid {},
+                PreprocessKind::ConvertToCuboid => ConvertToCuboid::new(1), // TODO
             })
             .collect();
         let job_que: BinaryHeap<_> = dataset

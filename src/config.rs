@@ -25,6 +25,7 @@ pub struct SchedulerConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreprocessorConfig {
     pub processes: Vec<PreprocessKind>,
+    pub num_cuboids: Option<u32>,
 }
 
 impl SimulationConfig {

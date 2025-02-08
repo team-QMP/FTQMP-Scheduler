@@ -27,14 +27,14 @@ impl Environment {
             ProgramFormat::Polycube(polycube) => polycube.blocks().iter().all(|b| {
                 0 <= b.x && b.x < self.size_x && 0 <= b.y && b.y < self.size_y && 0 <= b.z
             }),
-            ProgramFormat::Cuboid(c) => {
+            ProgramFormat::Cuboid(cs) => cs.iter().all(|c| {
                 let pos = c.pos();
                 0 <= pos.x
                     && pos.x + (c.size_x() as i32) <= self.size_x
                     && 0 <= pos.y
                     && pos.y + (c.size_y() as i32) <= self.size_y
                     && 0 <= pos.z
-            }
+            }),
         };
         let is_overlap = self.issued_programs.iter().any(|p2| is_overlap(p, p2));
         let can_insert = is_in_range && !is_overlap;
@@ -46,9 +46,11 @@ impl Environment {
                         self.end_cycle = u64::max(self.end_cycle, b.z as u64 + 1);
                     }
                 }
-                ProgramFormat::Cuboid(c) => {
-                    self.end_cycle =
-                        u64::max(self.end_cycle, c.pos().z as u64 + c.size_z() as u64 + 1);
+                ProgramFormat::Cuboid(cs) => {
+                    for c in cs {
+                        self.end_cycle =
+                            u64::max(self.end_cycle, c.pos().z as u64 + c.size_z() as u64 + 1);
+                    }
                 }
             }
         }

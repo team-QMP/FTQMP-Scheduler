@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ProgramFormat {
     Polycube(Polycube),
-    Cuboid(Cuboid),
+    Cuboid(Vec<Cuboid>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -38,7 +38,7 @@ impl Program {
         matches!(&self.format, ProgramFormat::Cuboid(_))
     }
 
-    pub fn cuboid(&self) -> Option<&Cuboid> {
+    pub fn cuboid(&self) -> Option<&Vec<Cuboid>> {
         match &self.format {
             ProgramFormat::Cuboid(c) => Some(c),
             _ => None,
@@ -81,10 +81,12 @@ pub fn is_overlap_polycube_cuboid(p: &Polycube, c: &Cuboid) -> bool {
 pub fn is_overlap(p1: &Program, p2: &Program) -> bool {
     match (p1.format(), p2.format()) {
         (ProgramFormat::Polycube(p1), ProgramFormat::Polycube(p2)) => is_overlap_polycubes(p1, p2),
-        (ProgramFormat::Polycube(p), ProgramFormat::Cuboid(c))
-        | (ProgramFormat::Cuboid(c), ProgramFormat::Polycube(p)) => {
-            is_overlap_polycube_cuboid(p, c)
+        (ProgramFormat::Polycube(p), ProgramFormat::Cuboid(cs))
+        | (ProgramFormat::Cuboid(cs), ProgramFormat::Polycube(p)) => {
+            cs.iter().any(|c| is_overlap_polycube_cuboid(p, c))
         }
-        (ProgramFormat::Cuboid(c1), ProgramFormat::Cuboid(c2)) => is_overlap_cuboids(c1, c2),
+        (ProgramFormat::Cuboid(cs1), ProgramFormat::Cuboid(cs2)) => cs1
+            .iter()
+            .any(|c1| cs2.iter().any(|c2| is_overlap_cuboids(c1, c2))),
     }
 }
