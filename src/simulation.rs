@@ -14,7 +14,7 @@ use crate::scheduler::{apply_schedule, Scheduler};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
-    pub programs: Vec<Program>,
+    pub programs: Option<Vec<Program>>,
     pub delays: Vec<(u64, u64)>,
     pub total_cycle: u64,
 }
@@ -132,7 +132,7 @@ impl Simulator {
         self.current_cycle += self.env.end_cycle() - self.env.program_counter();
 
         Ok(SimulationResult {
-            programs: result,
+            programs: Some(result),
             delays: self.delays,
             total_cycle: self.current_cycle,
         })

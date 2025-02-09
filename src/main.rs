@@ -19,6 +19,9 @@ struct Args {
 
     #[arg(short, long)]
     dataset_file: PathBuf,
+
+    #[arg(long)]
+    output_program_data: bool,
 }
 
 fn main() -> Result<()> {
@@ -42,9 +45,14 @@ fn main() -> Result<()> {
 
     tracing::info!("Start simulation");
     let simulator = Simulator::new(config, dataset, scheduler);
+    let mut result = simulator.run()?;
     tracing::info!("Simulation finished");
 
-    let result = simulator.run()?;
+    qmp_scheduler::visualizer::render_program(&result.programs.clone().unwrap());
+
+    if !args.output_program_data {
+        result.programs = None;
+    }
 
     let mut output_file = std::fs::File::create(args.output_file)?;
     output_file.write_all(serde_json::to_string(&result)?.as_bytes())?;

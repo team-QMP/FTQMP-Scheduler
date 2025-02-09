@@ -125,14 +125,19 @@ impl PolycubePackingProblem {
     }
 
     fn solve(self) -> Vec<Schedule> {
-        let mut problem = self
+        let problem = self
             .vars
-            .minimise(self.total_time)
-            .using(good_lp::coin_cbc)
-            .with(constraint!(self.total_time >= 0));
-        if let Some(time_limit) = self.config.time_limit {
-            problem.set_parameter("sec", &format!("{}", time_limit));
-        }
+            .minimise(self.total_time);
+        let problem = if let Some(time_limit) = self.config.time_limit {
+            let sec = std::time::Duration::new(time_limit.into(), 0);
+            let time_limit = cplex_rs::parameters::TimeLimit(sec);
+            let mut cplex_env = cplex_rs::Environment::new().expect("");
+            cplex_env.set_parameter(time_limit).unwrap(); // TODO
+            good_lp::solvers::cplex::cplex_with_env(problem, cplex_env)
+        } else {
+            problem.using(good_lp::solvers::cplex::cplex)
+        };
+        let mut problem = problem.with(constraint!(self.total_time >= 0));
 
         for (pos, is_present) in self.is_block_present {
             problem = problem.with(constraint!(is_present.clone() <= 1));
@@ -264,11 +269,16 @@ impl CuboidPackingProblem {
     }
 
     pub fn solve(self) -> Vec<Schedule> {
-        let mut problem = self.vars.minimise(self.v).using(good_lp::coin_cbc);
-
-        if let Some(time_limit) = self.config.time_limit {
-            problem.set_parameter("sec", &format!("{}", time_limit));
-        }
+        let problem = self.vars.minimise(self.v);
+        let mut problem = if let Some(time_limit) = self.config.time_limit {
+            let sec = std::time::Duration::new(time_limit.into(), 0);
+            let time_limit = cplex_rs::parameters::TimeLimit(sec);
+            let mut cplex_env = cplex_rs::Environment::new().expect("");
+            cplex_env.set_parameter(time_limit).unwrap(); // TODO
+            good_lp::solvers::cplex::cplex_with_env(problem, cplex_env)
+        } else {
+            problem.using(good_lp::solvers::cplex::cplex)
+        };
 
         let max_x = self.config.size_x as i32; // X
         let max_y = self.config.size_y as i32; // Y
