@@ -10,11 +10,21 @@ use crate::error::QMPError;
 use crate::job::{Job, JobID};
 use crate::preprocess::{ConvertToCuboid, PreprocessKind, Preprocessor};
 use crate::program::Program;
-use crate::scheduler::{apply_schedule, Scheduler};
+use crate::scheduler::{apply_schedule, Schedule, Scheduler};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct IssuedJob {
+    job_id: JobID,
+    program: Option<Program>,
+    schedule: Schedule,
+    requested_time: u64,
+    waiting_time: u64,
+    turnaround_time: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
-    pub programs: Vec<Program>,
+    pub jobs: Vec<IssuedJob>,
     pub delays: Vec<(u64, u64)>,
     pub total_cycle: u64,
 }
@@ -101,6 +111,8 @@ impl Simulator {
                 .div_ceil(self.config.micro_sec_per_cycle.into())
                 as u64;
 
+            self.current_cycle += elapsed_cycles;
+
             let mut scheduled_point = u64::MAX;
             for (job_id, schedule) in issued_programs {
                 if (schedule.z as u64) < self.env.program_counter() {
@@ -115,11 +127,21 @@ impl Simulator {
                 if !self.env.issue_program(&scheduled_program) {
                     return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
                 }
-                result.push(scheduled_program);
+
+                // TODO
+                let waiting_time = self.current_cycle - job.requested_time;
+                let issued_job = IssuedJob {
+                    job_id: job.id,
+                    program: Some(scheduled_program),
+                    schedule,
+                    requested_time: job.requested_time,
+                    waiting_time,
+                    turnaround_time: 0, // TODO
+                };
+                result.push(issued_job);
                 self.waiting_jobs.remove(&job_id);
             }
 
-            self.current_cycle += elapsed_cycles;
             // When the program point specified by the scheduler (= minimum z position of schedules) is reached, program execution is stopped until the result is returned.
             let count_to_scheduled_point = scheduled_point - self.env.program_counter();
             if count_to_scheduled_point < elapsed_cycles {
@@ -135,7 +157,7 @@ impl Simulator {
         self.current_cycle += self.env.end_cycle() - self.env.program_counter();
 
         Ok(SimulationResult {
-            programs: result,
+            jobs: result,
             delays: self.delays,
             total_cycle: self.current_cycle,
         })
