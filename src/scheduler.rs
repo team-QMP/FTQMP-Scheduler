@@ -17,7 +17,7 @@ pub enum SchedulerKind {
     LP,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Schedule {
     pub x: i32,
     pub y: i32,

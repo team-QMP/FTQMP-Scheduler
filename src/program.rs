@@ -48,6 +48,26 @@ impl Program {
     pub fn format(&self) -> &ProgramFormat {
         &self.format
     }
+
+    /// Returns the burst time (= execution time) in cycles
+    pub fn burst_time(&self) -> u64 {
+        match &self.format {
+            ProgramFormat::Polycube(poly) => {
+                assert!(poly.max_z() >= poly.min_z());
+                (poly.max_z() - poly.min_z()) as u64
+            }
+            ProgramFormat::Cuboid(cs) => {
+                let (min_z, max_z) = cs.iter().fold((u64::MAX, u64::MIN), |(min_z, max_z), c| {
+                    let z_pos = c.pos().z as u64;
+                    (
+                        u64::min(min_z, z_pos),
+                        u64::max(max_z, z_pos + c.size_z() as u64),
+                    )
+                });
+                max_z - min_z
+            }
+        }
+    }
 }
 
 pub fn is_overlap_polycubes(p1: &Polycube, p2: &Polycube) -> bool {
