@@ -13,7 +13,7 @@ use crate::program::Program;
 use crate::scheduler::{apply_schedule, Schedule, Scheduler};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct IssuedJob {
+pub struct IssuedJob {
     job_id: JobID,
     program: Option<Program>,
     schedule: Schedule,
@@ -113,12 +113,17 @@ impl Simulator {
 
             self.current_cycle += elapsed_cycles;
 
-            let mut scheduled_point = u64::MAX;
+            // TODO: Estimate a scheduled point
+            let scheduled_point = issued_programs
+                .iter()
+                .map(|(_, schedule)| schedule.z as u64)
+                .min()
+                .unwrap_or(u64::MAX);
+
             for (job_id, schedule) in issued_programs {
                 if (schedule.z as u64) < self.env.program_counter() {
                     return Err(QMPError::ViolateTimingConstraint.into());
                 }
-                scheduled_point = u64::min(scheduled_point, schedule.z as u64);
                 let job = self
                     .waiting_jobs
                     .get(&job_id)
@@ -130,13 +135,14 @@ impl Simulator {
 
                 // TODO
                 let waiting_time = self.current_cycle - job.requested_time;
+                let turnaround_time = waiting_time + scheduled_program.burst_time();
                 let issued_job = IssuedJob {
                     job_id: job.id,
                     program: Some(scheduled_program),
                     schedule,
                     requested_time: job.requested_time,
                     waiting_time,
-                    turnaround_time: 0, // TODO
+                    turnaround_time,
                 };
                 result.push(issued_job);
                 self.waiting_jobs.remove(&job_id);

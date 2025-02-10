@@ -249,8 +249,7 @@ impl CuboidPackingProblem {
 
         let cuboid_size = programs
             .iter()
-            .map(|cs| cs.iter().map(|c| [c.size_x(), c.size_y(), c.size_z()]))
-            .flatten()
+            .flat_map(|cs| cs.iter().map(|c| [c.size_x(), c.size_y(), c.size_z()]))
             .collect();
 
         Self {
