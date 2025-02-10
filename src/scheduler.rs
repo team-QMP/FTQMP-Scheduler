@@ -73,7 +73,7 @@ pub fn apply_schedule_to_polycube(polycube: &Polycube, schedule: &Schedule) -> P
     Polycube::new(blocks)
 }
 
-fn apply_schedule_to_cuboid(cuboid: &Cuboid, schedule: &Schedule) -> Cuboid {
+pub fn apply_schedule_to_cuboid(cuboid: &Cuboid, schedule: &Schedule) -> Cuboid {
     if let Some(polycube) = cuboid.original() {
         let scheduled_poly = apply_schedule_to_polycube(polycube, schedule);
         Cuboid::from(&scheduled_poly)
@@ -83,7 +83,7 @@ fn apply_schedule_to_cuboid(cuboid: &Cuboid, schedule: &Schedule) -> Cuboid {
         } else {
             (cuboid.size_x(), cuboid.size_y())
         };
-        let pos = Coordinate::new(schedule.x, schedule.y, schedule.z);
+        let pos = cuboid.pos().clone() + Coordinate::new(schedule.x, schedule.y, schedule.z);
         Cuboid::new(pos, size_x, size_y, cuboid.size_z())
     }
 }
