@@ -11,6 +11,8 @@ pub struct SimulationConfig {
     pub size_x: u32,
     pub size_y: u32,
     pub micro_sec_per_cycle: u64,
+    #[serde(default)]
+    pub no_output_program: bool,
     pub preprocessor: PreprocessorConfig,
     pub scheduler: SchedulerConfig,
 }

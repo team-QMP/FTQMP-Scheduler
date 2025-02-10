@@ -2,10 +2,15 @@ size_x = 6
 size_y = 6
 micro_sec_per_cycle = 100
 
+# (Optional)
+#no_output_program = true
+
 [preprocessor]
 processes = ["convert-to-cuboid"]
 
 [scheduler]
 kind = "greedy"
+# (Optional)
 time_limit = 60
+# (Optional)
 batch_size = 3
