@@ -113,19 +113,8 @@ impl<'de> Deserialize<'de> for Polycube {
 
 impl Polycube {
     pub fn new(blocks: Vec<Coordinate>) -> Self {
-        let (min_x, max_x, min_y, max_y, min_z, max_z) = blocks.iter().fold(
-            (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
-            |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
-                (
-                    i32::min(min_x, pos.x),
-                    i32::max(max_x, pos.x),
-                    i32::min(min_y, pos.y),
-                    i32::max(max_y, pos.y),
-                    i32::min(min_z, pos.z),
-                    i32::max(max_z, pos.z),
-                )
-            },
-        );
+        let (min_x, max_x, min_y, max_y, min_z, max_z) = calc_min_max_pos(&blocks);
+
         Self {
             blocks,
             min_x,
