@@ -133,7 +133,6 @@ impl Simulator {
                     return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
                 }
 
-                // TODO
                 let waiting_time = self.current_cycle - job.requested_time;
                 let turnaround_time = waiting_time + scheduled_program.burst_time();
                 let issued_job = IssuedJob {
