@@ -247,8 +247,11 @@ impl CuboidPackingProblem {
         }
         let v = vars.add_variable();
 
-        let cuboid_size = programs.iter()
-            .map(|cs| cs.iter().map(|c| [c.size_x(), c.size_y(), c.size_z()])).flatten().collect();
+        let cuboid_size = programs
+            .iter()
+            .map(|cs| cs.iter().map(|c| [c.size_x(), c.size_y(), c.size_z()]))
+            .flatten()
+            .collect();
 
         Self {
             config,
@@ -262,7 +265,7 @@ impl CuboidPackingProblem {
             b,
             c,
             v,
-            cuboid_size
+            cuboid_size,
         }
     }
 
@@ -322,7 +325,8 @@ impl CuboidPackingProblem {
                         let zj = self.z[id2];
 
                         if id1 < id2 {
-                            problem = problem.with(constraint!(aij + aji + bij + bji + cij + cji >= 1));
+                            problem =
+                                problem.with(constraint!(aij + aji + bij + bji + cij + cji >= 1));
                         }
                         problem = problem
                             .with(constraint!(xi - xj + max_x * aij <= max_x - size_xi))
@@ -334,17 +338,18 @@ impl CuboidPackingProblem {
         }
 
         let solution = problem.solve().unwrap();
-        (0..self.programs.len()).map(|i| {
-            let id = self.to_cuboid_idx[i][0];
-            let x = solution.value(self.x[id]).round() as i32;
-            let y = solution.value(self.y[id]).round() as i32;
-            let z = solution.value(self.z[id]).round() as i32;
-            let x_orig = self.programs[i][0].pos().x;
-            let y_orig = self.programs[i][0].pos().y;
-            let z_orig = self.programs[i][0].pos().z;
-            Schedule::new(x - x_orig, y - y_orig, z - z_orig, 0, false)
+        (0..self.programs.len())
+            .map(|i| {
+                let id = self.to_cuboid_idx[i][0];
+                let x = solution.value(self.x[id]).round() as i32;
+                let y = solution.value(self.y[id]).round() as i32;
+                let z = solution.value(self.z[id]).round() as i32;
+                let x_orig = self.programs[i][0].pos().x;
+                let y_orig = self.programs[i][0].pos().y;
+                let z_orig = self.programs[i][0].pos().z;
+                Schedule::new(x - x_orig, y - y_orig, z - z_orig, 0, false)
             })
-        .collect()
+            .collect()
     }
 }
 
@@ -375,11 +380,7 @@ impl Scheduler for LPScheduler {
                 ProgramFormat::Polycube(p) => {
                     p.blocks().iter().map(|c| c.z).max().unwrap() as u32 + 1
                 }
-                ProgramFormat::Cuboid(c) => {
-                    // TODO
-                    assert!(c[0].pos().z == 0);
-                    c[0].size_z() as u32
-                }
+                ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.size_z() as u32).sum(),
             })
             .sum();
         let pack_cfg = PackingConfig {
@@ -395,7 +396,7 @@ impl Scheduler for LPScheduler {
         } else if jobs.iter().all(|job| job.program.is_cuboid()) {
             let cuboids = jobs
                 .iter()
-                .map(|p| p.program.cuboid().unwrap().clone()) // TODO
+                .map(|p| p.program.cuboid().unwrap().clone())
                 .collect();
             PackingProblem::Cuboid(CuboidPackingProblem::new(pack_cfg, cuboids))
         } else {
@@ -429,8 +430,8 @@ impl LPScheduler {
 #[cfg(test)]
 pub mod test {
     use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
-    use crate::scheduler::{apply_schedule, apply_schedule_to_cuboid};
     use crate::scheduler::lp_scheduler::PackingConfig;
+    use crate::scheduler::{apply_schedule, apply_schedule_to_cuboid};
 
     #[test]
     fn test_lp_polycube() {
@@ -555,11 +556,11 @@ pub mod test {
         let programs = vec![
             vec![
                 Cuboid::new(Coordinate::new(0, 0, 0), 1, 1, 1),
-                Cuboid::new(Coordinate::new(1, 0, 1), 1, 1, 1)
+                Cuboid::new(Coordinate::new(1, 0, 1), 1, 1, 1),
             ],
             vec![
                 Cuboid::new(Coordinate::new(0, 0, 1), 1, 1, 1),
-                Cuboid::new(Coordinate::new(1, 0, 0), 1, 1, 1)
+                Cuboid::new(Coordinate::new(1, 0, 0), 1, 1, 1),
             ],
         ];
 
@@ -573,10 +574,13 @@ pub mod test {
         let problem = CuboidPackingProblem::new(config.clone(), programs.clone());
         let schedule = problem.solve();
         println!("schedule: {:?}", schedule);
-        let results: Vec<_> = programs.into_iter().enumerate()
+        let results: Vec<_> = programs
+            .into_iter()
+            .enumerate()
             .map(|(i, cs)| {
                 let schedule = &schedule[i];
-                cs.into_iter().map(|c| apply_schedule_to_cuboid(&c, schedule))
+                cs.into_iter()
+                    .map(|c| apply_schedule_to_cuboid(&c, schedule))
             })
             .flatten()
             .collect();

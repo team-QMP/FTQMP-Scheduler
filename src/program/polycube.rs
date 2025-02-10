@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 
 use rand::Rng;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_tuple::{Deserialize_tuple, Serialize_tuple};
 
 #[derive(
@@ -42,15 +42,38 @@ impl Coordinate {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Polycube {
     blocks: Vec<Coordinate>,
+    #[serde(skip)]
     min_x: i32,
+    #[serde(skip)]
     min_y: i32,
+    #[serde(skip)]
     max_x: i32,
+    #[serde(skip)]
     max_y: i32,
+    #[serde(skip)]
     min_z: i32,
+    #[serde(skip)]
     max_z: i32,
+}
+
+/// Returns (min_x, max_x, min_y, max_y, min_z, max_z)
+fn calc_min_max_pos(coordinates: &Vec<Coordinate>) -> (i32, i32, i32, i32, i32, i32) {
+    coordinates.iter().fold(
+        (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
+        |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
+            (
+                i32::min(min_x, pos.x),
+                i32::max(max_x, pos.x),
+                i32::min(min_y, pos.y),
+                i32::max(max_y, pos.y),
+                i32::min(min_z, pos.z),
+                i32::max(max_z, pos.z),
+            )
+        },
+    )
 }
 
 impl<const N: usize> From<&[(i32, i32, i32); N]> for Polycube {
@@ -60,6 +83,31 @@ impl<const N: usize> From<&[(i32, i32, i32); N]> for Polycube {
             blocks.push(Coordinate::from(*pos));
         }
         Polycube::new(blocks)
+    }
+}
+
+impl<'de> Deserialize<'de> for Polycube {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct TempPolycube {
+            blocks: Vec<Coordinate>,
+        }
+
+        let temp = TempPolycube::deserialize(deserializer)?;
+        let (min_x, max_x, min_y, max_y, min_z, max_z) = calc_min_max_pos(&temp.blocks);
+
+        Ok(Polycube {
+            blocks: temp.blocks,
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+            min_z,
+            max_z,
+        })
     }
 }
 
