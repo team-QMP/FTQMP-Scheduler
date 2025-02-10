@@ -24,6 +24,18 @@ impl From<(i32, i32, i32)> for Coordinate {
     }
 }
 
+impl std::ops::Add for Coordinate {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        }
+    }
+}
+
 impl Coordinate {
     pub fn new(x: i32, y: i32, z: i32) -> Self {
         Self { x, y, z }
