@@ -137,7 +137,11 @@ impl Simulator {
                 let turnaround_time = waiting_time + scheduled_program.burst_time();
                 let issued_job = IssuedJob {
                     job_id: job.id,
-                    program: Some(scheduled_program),
+                    program: if self.config.no_output_program {
+                        None
+                    } else {
+                        Some(scheduled_program)
+                    },
                     schedule,
                     requested_time: job.requested_time,
                     waiting_time,
