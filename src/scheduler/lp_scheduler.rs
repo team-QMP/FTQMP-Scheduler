@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::config::SimulationConfig;
 use crate::environment::Environment;
 use crate::job::Job;
@@ -414,6 +416,8 @@ impl CuboidPackingProblem {
 pub struct LPScheduler {
     job_list: VecDeque<Job>,
     config: SimulationConfig,
+    schedule_cycles_sum: u64,
+    scheduled_count: u64,
 }
 
 impl LPScheduler {
@@ -421,6 +425,8 @@ impl LPScheduler {
         Self {
             job_list: VecDeque::new(),
             config,
+            schedule_cycles_sum: 0,
+            scheduled_count: 0,
         }
     }
 }
@@ -441,27 +447,31 @@ impl Scheduler for LPScheduler {
                 ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.size_z() as u32).sum(),
             })
             .sum::<u32>();
+        let scheduled_point = (env.program_counter()
+            + self.schedule_cycles_sum / u64::max(1, self.scheduled_count))
+            as i32;
         let pack_cfg = PackingConfig {
             time_limit: self.config.scheduler.time_limit,
             size_x: self.config.size_x,
             size_y: self.config.size_y,
             size_z: worst_zsum + env.end_cycle() as u32,
-            min_z: env.program_counter() as i32,
+            min_z: scheduled_point,
         };
+
         let jobs = self.take_jobs_by_batch_size();
+
         let problem = if jobs.iter().all(|job| job.program.is_polycube()) {
             let programs = jobs.iter().map(|job| job.program.clone()).collect();
             // TODO
             PackingProblem::Polycube(PolycubePackingProblem::new(pack_cfg, programs))
         } else if jobs.iter().all(|job| job.program.is_cuboid()) {
-            let pc = env.program_counter();
             let fixed_cuboids = env
                 .issued_programs()
                 .iter()
                 .flat_map(|p| {
                     p.cuboid().unwrap().iter().filter_map(|c| {
                         let end_z = c.pos().z + c.size_z() as i32;
-                        if pc <= end_z as u64 {
+                        if scheduled_point <= end_z {
                             Some(c.clone())
                         } else {
                             None
@@ -477,7 +487,16 @@ impl Scheduler for LPScheduler {
         } else {
             unimplemented!()
         };
+
+        let start = Instant::now();
         let schedules = problem.solve();
+        let elapsed = start
+            .elapsed()
+            .as_micros()
+            .div_ceil(self.config.micro_sec_per_cycle.into());
+        self.schedule_cycles_sum += elapsed as u64;
+        self.scheduled_count += 1;
+
         // The schedules calculated with an empty environment, it is necessary to shift their z
         // position by the maximum z point of issued programs.
         let schedules: Vec<_> = schedules
