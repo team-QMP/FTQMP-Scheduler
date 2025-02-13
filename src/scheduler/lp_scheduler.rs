@@ -447,9 +447,10 @@ impl Scheduler for LPScheduler {
                 ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.size_z() as u32).sum(),
             })
             .sum::<u32>();
-        let scheduled_point = (env.program_counter()
-            + self.schedule_cycles_sum / u64::max(1, self.scheduled_count))
-            as i32;
+        let scheduled_point = u64::min(
+            env.end_cycle(),
+            env.program_counter() + self.schedule_cycles_sum / u64::max(1, self.scheduled_count),
+        ) as i32;
         let pack_cfg = PackingConfig {
             time_limit: self.config.scheduler.time_limit,
             size_x: self.config.size_x,
