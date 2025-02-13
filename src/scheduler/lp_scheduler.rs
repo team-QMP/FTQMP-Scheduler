@@ -16,6 +16,7 @@ struct PackingConfig {
     size_x: u32,
     size_y: u32,
     size_z: u32,
+    min_z: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -184,6 +185,7 @@ impl PolycubePackingProblem {
 #[warn(dead_code)]
 struct CuboidPackingProblem {
     config: PackingConfig,
+    fixed_cuboids: Vec<Cuboid>,
     programs: Vec<Vec<Cuboid>>,
     vars: ProblemVariables,
     to_cuboid_idx: Vec<Vec<usize>>, // (program_idx, cuboid_idx in the program) -> cuboid_idx
@@ -199,12 +201,16 @@ struct CuboidPackingProblem {
 
 // TODO: Consider rotations
 impl CuboidPackingProblem {
-    pub fn new(config: PackingConfig, programs: Vec<Vec<Cuboid>>) -> Self {
+    pub fn new(
+        config: PackingConfig,
+        fixed_cuboids: Vec<Cuboid>,
+        programs: Vec<Vec<Cuboid>>,
+    ) -> Self {
         assert!(!programs.is_empty());
 
         let mut vars = variables!();
         let num_programs = programs.len();
-        let num_cuboids = programs.iter().map(|cs| cs.len()).sum();
+        let num_cuboids = programs.iter().map(|cs| cs.len()).sum::<usize>() + fixed_cuboids.len();
 
         let mut to_cuboid_idx = vec![Vec::new(); num_programs];
         {
@@ -243,6 +249,16 @@ impl CuboidPackingProblem {
                         c.insert((id1, id2), vars.add(variable().binary()));
                     }
                 }
+
+                let offset = num_cuboids - fixed_cuboids.len();
+                for i2 in offset..num_cuboids {
+                    a.insert((id1, i2), vars.add(variable().binary()));
+                    a.insert((i2, id1), vars.add(variable().binary()));
+                    b.insert((id1, i2), vars.add(variable().binary()));
+                    b.insert((i2, id1), vars.add(variable().binary()));
+                    c.insert((id1, i2), vars.add(variable().binary()));
+                    c.insert((i2, id1), vars.add(variable().binary()));
+                }
             }
         }
         let v = vars.add_variable();
@@ -254,6 +270,7 @@ impl CuboidPackingProblem {
 
         Self {
             config,
+            fixed_cuboids,
             programs,
             to_cuboid_idx,
             vars,
@@ -279,6 +296,23 @@ impl CuboidPackingProblem {
         let max_y = self.config.size_y as i32; // Y
         let max_z = self.config.size_z as i32; // Z
 
+        let num_cuboids = self.x.len();
+        let offset_idx = num_cuboids - self.fixed_cuboids.len();
+
+        for i in 0..self.fixed_cuboids.len() {
+            let var_idx = i + offset_idx;
+            problem = problem
+                .with(constraint!(
+                    self.x[var_idx] == self.fixed_cuboids[i].pos().x
+                ))
+                .with(constraint!(
+                    self.y[var_idx] == self.fixed_cuboids[i].pos().y
+                ))
+                .with(constraint!(
+                    self.z[var_idx] == self.fixed_cuboids[i].pos().z
+                ));
+        }
+
         for i1 in 0..self.programs.len() {
             for j1 in 0..self.programs[i1].len() {
                 let id1 = self.to_cuboid_idx[i1][j1];
@@ -303,9 +337,34 @@ impl CuboidPackingProblem {
                     .with(constraint!(xi + size_xi <= max_x))
                     .with(constraint!(0 <= yi))
                     .with(constraint!(yi + size_yi <= max_y))
-                    .with(constraint!(0 <= zi))
+                    .with(constraint!(self.config.min_z <= zi))
                     .with(constraint!(zi + size_zi <= max_z))
                     .with(constraint!(zi + size_zi <= self.v));
+
+                // for fixed_cuboids
+                for i2 in 0..self.fixed_cuboids.len() {
+                    let id2 = i2 + offset_idx;
+                    let aij = self.a[&(id1, id2)];
+                    let aji = self.a[&(id2, id1)];
+                    let bij = self.b[&(id1, id2)];
+                    let bji = self.b[&(id2, id1)];
+                    let cij = self.c[&(id1, id2)];
+                    let cji = self.c[&(id2, id1)];
+                    let xj = self.x[id2];
+                    let yj = self.y[id2];
+                    let zj = self.z[id2];
+                    let size_xj = self.fixed_cuboids[i2].size_x() as i32;
+                    let size_yj = self.fixed_cuboids[i2].size_y() as i32;
+                    let size_zj = self.fixed_cuboids[i2].size_z() as i32;
+                    problem = problem.with(constraint!(aij + aji + bij + bji + cij + cji >= 1));
+                    problem = problem
+                        .with(constraint!(xi - xj + max_x * aij <= max_x - size_xi))
+                        .with(constraint!(yi - yj + max_y * bij <= max_y - size_yi))
+                        .with(constraint!(zi - zj + max_z * cij <= max_z - size_zi))
+                        .with(constraint!(xj - xi + max_x * aji <= max_x - size_xj))
+                        .with(constraint!(yj - yi + max_y * bji <= max_y - size_yj))
+                        .with(constraint!(zj - zi + max_z * cji <= max_z - size_zj));
+                }
 
                 for i2 in 0..self.programs.len() {
                     if i1 == i2 {
@@ -381,23 +440,40 @@ impl Scheduler for LPScheduler {
                 }
                 ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.size_z() as u32).sum(),
             })
-            .sum();
+            .sum::<u32>();
         let pack_cfg = PackingConfig {
             time_limit: self.config.scheduler.time_limit,
             size_x: self.config.size_x,
             size_y: self.config.size_y,
-            size_z: worst_zsum,
+            size_z: worst_zsum + env.end_cycle() as u32,
+            min_z: env.program_counter() as i32,
         };
         let jobs = self.take_jobs_by_batch_size();
         let problem = if jobs.iter().all(|job| job.program.is_polycube()) {
             let programs = jobs.iter().map(|job| job.program.clone()).collect();
+            // TODO
             PackingProblem::Polycube(PolycubePackingProblem::new(pack_cfg, programs))
         } else if jobs.iter().all(|job| job.program.is_cuboid()) {
+            let pc = env.program_counter();
+            let fixed_cuboids = env
+                .issued_programs()
+                .iter()
+                .flat_map(|p| {
+                    p.cuboid().unwrap().iter().filter_map(|c| {
+                        let end_z = c.pos().z + c.size_z() as i32;
+                        if pc <= end_z as u64 {
+                            Some(c.clone())
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect();
             let cuboids = jobs
                 .iter()
                 .map(|p| p.program.cuboid().unwrap().clone())
                 .collect();
-            PackingProblem::Cuboid(CuboidPackingProblem::new(pack_cfg, cuboids))
+            PackingProblem::Cuboid(CuboidPackingProblem::new(pack_cfg, fixed_cuboids, cuboids))
         } else {
             unimplemented!()
         };
@@ -441,6 +517,7 @@ pub mod test {
             size_x: 4,
             size_y: 3,
             size_z: 8,
+            min_z: 0,
         };
         let format = ProgramFormat::Polycube(Polycube::from(&[
             (0, 0, 0),
@@ -518,9 +595,10 @@ pub mod test {
             size_x: 2,
             size_y: 2,
             size_z: 2,
+            min_z: 0,
         };
 
-        let problem = CuboidPackingProblem::new(config.clone(), programs.clone());
+        let problem = CuboidPackingProblem::new(config.clone(), Vec::new(), programs.clone());
         let schedule = problem.solve();
         println!("{:?}", schedule);
         for i in 0..programs.len() {
@@ -568,9 +646,10 @@ pub mod test {
             size_x: 2,
             size_y: 1,
             size_z: 2,
+            min_z: 0,
         };
 
-        let problem = CuboidPackingProblem::new(config.clone(), programs.clone());
+        let problem = CuboidPackingProblem::new(config.clone(), Vec::new(), programs.clone());
         let schedule = problem.solve();
         println!("schedule: {:?}", schedule);
         let results: Vec<_> = programs
