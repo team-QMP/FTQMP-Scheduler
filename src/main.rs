@@ -5,7 +5,9 @@ use anyhow::Result;
 
 use qmp_scheduler::config::SimulationConfig;
 use qmp_scheduler::dataset::Dataset;
-use qmp_scheduler::scheduler::{GreedyScheduler, LPScheduler, Scheduler, SchedulerKind};
+use qmp_scheduler::scheduler::{
+    FastGreedyScheduler, GreedyScheduler, LPScheduler, Scheduler, SchedulerKind,
+};
 use qmp_scheduler::simulation::Simulator;
 
 #[derive(Parser, Debug)]
@@ -37,6 +39,7 @@ fn main() -> Result<()> {
     tracing::info!("Configure the scheduler: {:?}", config.scheduler.kind);
     let scheduler: Box<dyn Scheduler> = match config.scheduler.kind {
         SchedulerKind::Greedy => Box::new(GreedyScheduler::new(config.clone())),
+        SchedulerKind::FastGreedy => Box::new(FastGreedyScheduler::new(config.clone())),
         SchedulerKind::LP => Box::new(LPScheduler::new(config.clone())),
     };
 

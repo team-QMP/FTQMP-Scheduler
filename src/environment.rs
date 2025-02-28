@@ -22,7 +22,7 @@ impl Environment {
         }
     }
 
-    pub fn issue_program(&mut self, p: &Program) -> bool {
+    pub fn can_issue(&self, p: &Program) -> bool {
         let is_in_range = match p.format() {
             ProgramFormat::Polycube(polycube) => polycube.blocks().iter().all(|b| {
                 0 <= b.x && b.x < self.size_x && 0 <= b.y && b.y < self.size_y && 0 <= b.z
@@ -37,8 +37,12 @@ impl Environment {
             }),
         };
         let is_overlap = self.issued_programs.iter().any(|p2| is_overlap(p, p2));
-        let can_insert = is_in_range && !is_overlap;
-        if can_insert {
+        is_in_range && !is_overlap
+    }
+
+    pub fn issue_program(&mut self, p: &Program) -> bool {
+        let can_issue = self.can_issue(p);
+        if can_issue {
             self.issued_programs.push(p.clone());
             match p.format() {
                 ProgramFormat::Polycube(p) => {
@@ -54,7 +58,7 @@ impl Environment {
                 }
             }
         }
-        can_insert
+        can_issue
     }
 
     pub fn issued_programs(&self) -> &Vec<Program> {

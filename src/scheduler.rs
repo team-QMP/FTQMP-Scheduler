@@ -1,6 +1,8 @@
+pub mod fast_greedy_scheduler;
 pub mod greedy_scheduler;
 pub mod lp_scheduler;
 
+pub use fast_greedy_scheduler::FastGreedyScheduler;
 pub use greedy_scheduler::GreedyScheduler;
 pub use lp_scheduler::LPScheduler;
 
@@ -14,6 +16,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "lowercase")]
 pub enum SchedulerKind {
     Greedy,
+    FastGreedy,
     LP,
 }
 
