@@ -1,7 +1,7 @@
 use crate::config::SimulationConfig;
 use crate::environment::Environment;
 use crate::job::Job;
-use crate::program::{Coordinate, Program, ProgramFormat};
+use crate::program::{is_overlap, Coordinate, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
 use std::collections::VecDeque;
@@ -48,11 +48,11 @@ fn create_location_candidate(p: &Program) -> Vec<Coordinate> {
             |(x1, x2, y1, y2, z1, z2), c| {
                 (
                     i32::min(x1, c.pos().x),
-                    i32::max(x2, c.pos().x),
+                    i32::max(x2, c.pos().x + (c.size_x() as i32)),
                     i32::min(y1, c.pos().y),
-                    i32::max(y2, c.pos().y),
+                    i32::max(y2, c.pos().y + (c.size_y() as i32)),
                     i32::min(z1, c.pos().z),
-                    i32::max(z2, c.pos().z),
+                    i32::max(z2, c.pos().z + (c.size_z() as i32)),
                 )
             },
         ),
@@ -62,6 +62,7 @@ fn create_location_candidate(p: &Program) -> Vec<Coordinate> {
         Coordinate::new(x2, y1, z1),
         Coordinate::new(x1, y2, z1),
         Coordinate::new(x1, y1, z2),
+        Coordinate::new(0, 0, z2),
     ]
 }
 
@@ -85,6 +86,7 @@ impl Scheduler for FastGreedyScheduler {
             .collect();
 
         let mut res = Vec::new();
+        let mut scheduled_programs= Vec::new(); // programs to be issued in this scheduling
         let jobs = self.take_jobs_by_batch_size();
         for job in jobs {
             let mut best_it = None;
@@ -95,7 +97,9 @@ impl Scheduler for FastGreedyScheduler {
                         let schedule =
                             Schedule::new(candidate.x, candidate.y, candidate.z, rot, flip);
                         let scheduled_program = apply_schedule(&job.program, &schedule);
-                        if env.can_issue(&scheduled_program) {
+                        let is_overlap = scheduled_programs.iter()
+                            .any(|p| is_overlap(&scheduled_program, p));
+                        if !is_overlap && env.can_issue(&scheduled_program) {
                             if best.is_none() || best.clone().unwrap().z > schedule.z {
                                 best = Some(schedule);
                                 best_it = Some(i);
@@ -110,6 +114,7 @@ impl Scheduler for FastGreedyScheduler {
             self.location_candidates.remove(best_it.expect(""));
             self.location_candidates
                 .extend(create_location_candidate(&scheduled_program));
+            scheduled_programs.push(scheduled_program);
             res.push((job.id, best_schedule));
         }
 

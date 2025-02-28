@@ -43,11 +43,11 @@ fn main() -> Result<()> {
         SchedulerKind::LP => Box::new(LPScheduler::new(config.clone())),
     };
 
-    tracing::info!("Start simulation");
     let simulator = Simulator::new(config, dataset, scheduler);
-    tracing::info!("Simulation finished");
 
+    tracing::info!("Start simulation");
     let result = simulator.run()?;
+    tracing::info!("Simulation finished");
 
     let mut output_file = std::fs::File::create(args.output_file)?;
     output_file.write_all(serde_json::to_string(&result)?.as_bytes())?;

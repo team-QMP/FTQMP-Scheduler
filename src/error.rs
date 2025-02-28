@@ -7,7 +7,7 @@ use crate::scheduler::Schedule;
 pub enum QMPError {
     #[error("Invalid job ID specified (job_id = {0})")]
     InvalidJobID(JobID),
-    #[error("Invalid schedule (job = {job:?}, schedule = {schedule:?})")]
+    #[error("Invalid schedule (job_id = {}, schedule = {schedule:?})", job.id)]
     InvalidSchedule { job: Job, schedule: Schedule },
     #[error("Violate timing constraint")]
     ViolateTimingConstraint,
