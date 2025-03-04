@@ -1,6 +1,8 @@
+pub mod fast_greedy_scheduler;
 pub mod greedy_scheduler;
 pub mod lp_scheduler;
 
+pub use fast_greedy_scheduler::FastGreedyScheduler;
 pub use greedy_scheduler::GreedyScheduler;
 pub use lp_scheduler::LPScheduler;
 
@@ -14,6 +16,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "lowercase")]
 pub enum SchedulerKind {
     Greedy,
+    FastGreedy,
     LP,
 }
 
@@ -22,7 +25,7 @@ pub struct Schedule {
     pub x: i32,
     pub y: i32,
     pub z: i32,
-    pub rotate: i32, // 0 <= rotate < 3
+    pub rotate: i32, // 0 <= rotate < 4
     pub flip: bool,
 }
 
@@ -89,7 +92,7 @@ pub fn apply_schedule_to_cuboid(cuboid: &Cuboid, schedule: &Schedule) -> Cuboid 
 }
 
 pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
-    assert!(0 <= schedule.rotate && schedule.rotate < 3);
+    assert!(0 <= schedule.rotate && schedule.rotate < 4);
     match program.format() {
         ProgramFormat::Polycube(polycube) => {
             let scheduled = apply_schedule_to_polycube(polycube, schedule);
