@@ -72,21 +72,11 @@ impl Scheduler for FastGreedyScheduler {
     }
 
     fn run(&mut self, env: &Environment) -> Vec<(JobID, Schedule)> {
-        // TODO: refactoring
-        self.location_candidates = self
-            .location_candidates
-            .iter()
-            .filter_map(|candidate| {
-                if candidate.z as u64 >= env.program_counter() {
-                    Some(candidate.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
+        self.location_candidates
+            .retain(|c| c.z as u64 >= env.program_counter());
 
         let mut res = Vec::new();
-        let mut scheduled_programs= Vec::new(); // programs to be issued in this scheduling
+        let mut scheduled_programs = Vec::new(); // programs to be issued in this scheduling
         let jobs = self.take_jobs_by_batch_size();
         for job in jobs {
             let mut best_it = None;
@@ -97,7 +87,8 @@ impl Scheduler for FastGreedyScheduler {
                         let schedule =
                             Schedule::new(candidate.x, candidate.y, candidate.z, rot, flip);
                         let scheduled_program = apply_schedule(&job.program, &schedule);
-                        let is_overlap = scheduled_programs.iter()
+                        let is_overlap = scheduled_programs
+                            .iter()
                             .any(|p| is_overlap(&scheduled_program, p));
                         if !is_overlap && env.can_issue(&scheduled_program) {
                             if best.is_none() || best.clone().unwrap().z > schedule.z {
