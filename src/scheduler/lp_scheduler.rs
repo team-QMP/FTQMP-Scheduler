@@ -675,12 +675,11 @@ pub mod test {
         let results: Vec<_> = programs
             .into_iter()
             .enumerate()
-            .map(|(i, cs)| {
+            .flat_map(|(i, cs)| {
                 let schedule = &schedule[i];
                 cs.into_iter()
                     .map(|c| apply_schedule_to_cuboid(&c, schedule))
             })
-            .flatten()
             .collect();
         println!("results: {:?}", results);
 
@@ -694,13 +693,13 @@ pub mod test {
             assert!(0 <= xi && xi + size_xi <= config.size_x as i32);
             assert!(0 <= yi && yi + size_yi <= config.size_y as i32);
             assert!(0 <= zi && zi + size_zi <= config.size_z as i32);
-            for j in i + 1..results.len() {
-                let xj = results[j].pos().x;
-                let yj = results[j].pos().y;
-                let zj = results[j].pos().z;
-                let size_xj = results[j].size_x() as i32;
-                let size_yj = results[j].size_y() as i32;
-                let size_zj = results[j].size_z() as i32;
+            for result_j in results.iter().skip(i + 1) {
+                let xj = result_j.pos().x;
+                let yj = result_j.pos().y;
+                let zj = result_j.pos().z;
+                let size_xj = result_j.size_x() as i32;
+                let size_yj = result_j.size_y() as i32;
+                let size_zj = result_j.size_z() as i32;
                 let is_overlap_x = !(xi + size_xi <= xj || xj + size_xj <= xi);
                 let is_overlap_y = !(yi + size_yi <= yj || yj + size_yj <= yi);
                 let is_overlap_z = !(zi + size_zi <= zj || zj + size_zj <= zi);

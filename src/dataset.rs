@@ -28,7 +28,7 @@ impl Dataset {
     pub fn requests(&self) -> Vec<(u64, &Program)> {
         self.job_requests
             .iter()
-            .map(|&(t, id)| (t, &self.programs[id as usize]))
+            .map(|&(t, id)| (t, &self.programs[id]))
             .collect()
     }
 }
