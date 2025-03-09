@@ -23,6 +23,9 @@ jobs:
     - name: Check format
       run: cargo fmt --check
 
+    - name: Clippy
+      run: cargo clippy --tests --examples -- -Dclippy::all
+
     - name: Build test
       run: cargo build --release --verbose
     - name: Run tests

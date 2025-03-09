@@ -60,7 +60,7 @@ pub struct Polycube {
 }
 
 /// Returns (min_x, max_x, min_y, max_y, min_z, max_z)
-fn calc_min_max_pos(coordinates: &Vec<Coordinate>) -> (i32, i32, i32, i32, i32, i32) {
+fn calc_min_max_pos(coordinates: &[Coordinate]) -> (i32, i32, i32, i32, i32, i32) {
     coordinates.iter().fold(
         (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
         |(min_x, max_x, min_y, max_y, min_z, max_z), pos| {
@@ -205,7 +205,7 @@ fn add_random_block(polycube: &mut Polycube) {
             }
         }
     }
-    if pos_candidate_list.len() == 0 {
+    if pos_candidate_list.is_empty() {
         pos_candidate_list.push(Coordinate { x: 0, y: 0, z: 0 });
     }
 
@@ -230,7 +230,7 @@ pub fn create_random_polycube(num_block: i32) -> Polycube {
     for _ in 0..num_block {
         add_random_block(&mut polycube);
     }
-    return polycube;
+    polycube
 }
 
 #[cfg(test)]

@@ -90,11 +90,12 @@ impl Scheduler for FastGreedyScheduler {
                         let is_overlap = scheduled_programs
                             .iter()
                             .any(|p| is_overlap(&scheduled_program, p));
-                        if !is_overlap && env.can_issue(&scheduled_program) {
-                            if best.is_none() || best.clone().unwrap().z > schedule.z {
-                                best = Some(schedule);
-                                best_it = Some(i);
-                            }
+                        if !is_overlap
+                            && env.can_issue(&scheduled_program)
+                            && (best.is_none() || best.clone().unwrap().z > schedule.z)
+                        {
+                            best = Some(schedule);
+                            best_it = Some(i);
                         }
                     }
                 }
