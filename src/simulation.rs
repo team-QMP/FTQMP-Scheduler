@@ -7,6 +7,7 @@ use crate::config::SimulationConfig;
 use crate::dataset::Dataset;
 use crate::environment::Environment;
 use crate::error::QMPError;
+use crate::event::Event;
 use crate::job::{Job, JobID};
 use crate::preprocess::{ConvertToCuboid, PreprocessKind, Preprocessor};
 use crate::program::Program;
@@ -25,8 +26,8 @@ pub struct IssuedJob {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
     pub jobs: Vec<IssuedJob>,
-    pub delays: Vec<(u64, u64)>,
     pub total_cycle: u64,
+    pub event_log: Vec<Event>,
 }
 
 pub struct Simulator {
@@ -37,9 +38,9 @@ pub struct Simulator {
     /// The requested but not scheduled job list
     waiting_jobs: BTreeMap<u32, Job>,
     /// The number of cycles elapsed since the start of the simulation.
-    current_cycle: u64,
-    /// A delay (s, d) means a delay of $d$ cycles occured in the $s$-th step.
-    delays: Vec<(u64, u64)>,
+    simulation_time: u64,
+    /// the event log
+    event_log: Vec<Event>,
 }
 
 impl Simulator {
@@ -73,8 +74,8 @@ impl Simulator {
             scheduler,
             job_que,
             waiting_jobs: BTreeMap::new(),
-            current_cycle: 0,
-            delays: Vec::new(),
+            simulation_time: 0,
+            event_log: Vec::new(),
         }
     }
 
@@ -86,16 +87,16 @@ impl Simulator {
             // then change the current cycle to the time when the new job is requested.
             if self.waiting_jobs.is_empty()
                 && !self.job_que.is_empty()
-                && self.job_que.peek().unwrap().requested_time > self.current_cycle
+                && self.job_que.peek().unwrap().requested_time > self.simulation_time
             {
                 let forward_cycles =
-                    self.job_que.peek().unwrap().requested_time - self.current_cycle;
-                self.current_cycle += forward_cycles;
+                    self.job_que.peek().unwrap().requested_time - self.simulation_time;
+                self.simulation_time += forward_cycles;
                 self.env.incr_pc(forward_cycles);
             }
 
             while !self.job_que.is_empty()
-                && self.job_que.peek().unwrap().requested_time <= self.current_cycle
+                && self.job_que.peek().unwrap().requested_time <= self.simulation_time
             {
                 let job = self.job_que.pop().unwrap();
                 self.waiting_jobs.insert(job.id, job.clone());
@@ -111,7 +112,7 @@ impl Simulator {
                 .div_ceil(self.config.micro_sec_per_cycle.into())
                 as u64;
 
-            self.current_cycle += elapsed_cycles;
+            self.simulation_time += elapsed_cycles;
 
             // TODO: Estimate a scheduled point
             let scheduled_point = issued_programs
@@ -133,7 +134,7 @@ impl Simulator {
                     return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
                 }
 
-                let waiting_time = self.current_cycle - job.requested_time;
+                let waiting_time = self.simulation_time - job.requested_time;
                 let turnaround_time = waiting_time + scheduled_program.burst_time();
                 let issued_job = IssuedJob {
                     job_id: job.id,
@@ -154,8 +155,10 @@ impl Simulator {
             // When the program point specified by the scheduler (= minimum z position of schedules) is reached, program execution is stopped until the result is returned.
             let count_to_scheduled_point = scheduled_point - self.env.program_counter();
             if count_to_scheduled_point < elapsed_cycles {
-                self.delays
-                    .push((scheduled_point, elapsed_cycles - count_to_scheduled_point));
+                self.log_event(Event::suspend_exec(
+                    scheduled_point,
+                    elapsed_cycles - count_to_scheduled_point,
+                ));
                 self.env.incr_pc(count_to_scheduled_point);
             } else {
                 self.env.incr_pc(elapsed_cycles);
@@ -163,12 +166,16 @@ impl Simulator {
         }
 
         // Consume remaining program execution
-        self.current_cycle += self.env.end_cycle() - self.env.program_counter();
+        self.simulation_time += self.env.end_cycle() - self.env.program_counter();
 
         Ok(SimulationResult {
             jobs: result,
-            delays: self.delays,
-            total_cycle: self.current_cycle,
+            total_cycle: self.simulation_time,
+            event_log: self.event_log,
         })
+    }
+
+    pub fn log_event(&mut self, event: Event) {
+        self.event_log.push(event)
     }
 }
