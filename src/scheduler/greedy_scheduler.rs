@@ -29,7 +29,7 @@ impl Scheduler for GreedyScheduler {
     fn run(&mut self, env: &Environment) -> Vec<(JobID, Schedule)> {
         let mut res = Vec::new();
         for job in self.take_jobs_by_batch_size() {
-            let mut dz = env.program_counter();
+            let mut dz = env.global_pc();
             'top: loop {
                 for dx in 0..self.config.size_x {
                     for dy in 0..self.config.size_y {

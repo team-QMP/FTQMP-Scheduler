@@ -448,14 +448,14 @@ impl Scheduler for LPScheduler {
             })
             .sum::<u32>();
         let scheduled_point = u64::min(
-            env.end_cycle(),
-            env.program_counter() + self.schedule_cycles_sum / u64::max(1, self.scheduled_count),
+            env.end_pc(),
+            env.global_pc() + self.schedule_cycles_sum / u64::max(1, self.scheduled_count),
         ) as i32;
         let pack_cfg = PackingConfig {
             time_limit: self.config.scheduler.time_limit,
             size_x: self.config.size_x,
             size_y: self.config.size_y,
-            size_z: worst_zsum + env.end_cycle() as u32,
+            size_z: worst_zsum + env.end_pc() as u32,
             min_z: scheduled_point,
         };
 

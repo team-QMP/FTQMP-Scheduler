@@ -1,14 +1,13 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BinaryHeap};
 use std::time::Instant;
 
 use crate::config::SimulationConfig;
 use crate::dataset::Dataset;
 use crate::environment::Environment;
 use crate::error::QMPError;
-use crate::event::Event;
-use crate::job::{Job, JobID};
+use crate::event::{Event, EventQueue, EventType};
+use crate::job::{Job, JobID, JobStatus};
 use crate::preprocess::{ConvertToCuboid, PreprocessKind, Preprocessor};
 use crate::program::Program;
 use crate::scheduler::{apply_schedule, Schedule, Scheduler};
@@ -34,11 +33,12 @@ pub struct Simulator {
     config: SimulationConfig,
     env: Environment,
     scheduler: Box<dyn Scheduler>,
-    job_que: BinaryHeap<Job>,
-    /// The requested but not scheduled job list
-    waiting_jobs: BTreeMap<u32, Job>,
+    /// The job list
+    job_list: Vec<Job>,
     /// The number of cycles elapsed since the start of the simulation.
     simulation_time: u64,
+    /// the event queue
+    event_que: EventQueue,
     /// the event log
     event_log: Vec<Event>,
 }
@@ -56,25 +56,25 @@ impl Simulator {
                 }
             })
             .collect();
-        let job_que: BinaryHeap<_> = dataset
-            .requests()
-            .into_iter()
-            .enumerate()
-            .map(|(i, (t, program))| {
-                let program = preprocessors
-                    .iter()
-                    .fold(program.clone(), |p, pp| pp.process(p));
-                Job::new(i as JobID, t, program)
-            })
-            .collect();
+
+        let mut job_list = Vec::new();
+        let mut event_que = EventQueue::new();
+        for (i, (t, p)) in dataset.requests().into_iter().enumerate() {
+            let p = preprocessors
+                .iter()
+                .fold(p.clone(), |p, proc| proc.process(p));
+            let job = Job::new(i as JobID, t, p.clone());
+            job_list.push(job);
+            event_que.add_event(Event::request_job(t, i as JobID));
+        }
 
         Self {
             env: Environment::new(config.size_x as i32, config.size_y as i32),
             config,
             scheduler,
-            job_que,
-            waiting_jobs: BTreeMap::new(),
+            job_list,
             simulation_time: 0,
+            event_que: EventQueue::new(),
             event_log: Vec::new(),
         }
     }
@@ -82,91 +82,98 @@ impl Simulator {
     pub fn run(mut self) -> Result<SimulationResult> {
         let mut result = Vec::new();
 
-        while !self.job_que.is_empty() || !self.waiting_jobs.is_empty() {
-            // When the scheduler does not have jobs to be scheduled and there is a job in the job queue,
-            // then change the current cycle to the time when the new job is requested.
-            if self.waiting_jobs.is_empty()
-                && !self.job_que.is_empty()
-                && self.job_que.peek().unwrap().requested_time > self.simulation_time
-            {
-                let forward_cycles =
-                    self.job_que.peek().unwrap().requested_time - self.simulation_time;
-                self.simulation_time += forward_cycles;
-                self.env.incr_pc(forward_cycles);
-            }
+        while let Some(event) = self.event_que.pop() {
+            let event_time = event.event_time();
+            assert!(event_time >= self.simulation_time);
 
-            while !self.job_que.is_empty()
-                && self.job_que.peek().unwrap().requested_time <= self.simulation_time
-            {
-                let job = self.job_que.pop().unwrap();
-                self.waiting_jobs.insert(job.id, job.clone());
-                self.scheduler.add_job(job);
-            }
+            let elapsed_cycle = event_time - self.simulation_time;
+            self.simulation_time = event_time;
+            self.env.proceed_cycle(elapsed_cycle);
 
-            // TODO: How to estimate the execution time of the scheduler?
-            let start = Instant::now();
-            let issued_programs = self.scheduler.run(&self.env);
-            let elapsed_cycles = start
-                .elapsed()
-                .as_micros()
-                .div_ceil(self.config.micro_sec_per_cycle.into())
-                as u64;
-
-            self.simulation_time += elapsed_cycles;
-
-            // TODO: Estimate a scheduled point
-            let scheduled_point = issued_programs
-                .iter()
-                .map(|(_, schedule)| schedule.z as u64)
-                .min()
-                .unwrap_or(u64::MAX);
-
-            for (job_id, schedule) in issued_programs {
-                if (schedule.z as u64) < self.env.program_counter() {
-                    return Err(QMPError::ViolateTimingConstraint.into());
+            match event.event_type() {
+                EventType::RequestJob { job_id } => {
+                    let job_id = *job_id as usize;
+                    self.job_list[job_id].update_status(JobStatus::Waiting);
+                    self.scheduler.add_job(self.job_list[job_id].clone());
                 }
-                let job = self
-                    .waiting_jobs
-                    .get(&job_id)
-                    .ok_or_else(|| QMPError::invalid_job_id(job_id))?;
-                let scheduled_program = apply_schedule(&job.program, &schedule);
-                if !self.env.issue_program(&scheduled_program) {
-                    return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
+                EventType::StartScheduling => {
+                    let start = Instant::now();
+                    let issued_programs = self.scheduler.run(&self.env);
+                    let elapsed_cycles = start
+                        .elapsed()
+                        .as_micros()
+                        .div_ceil(self.config.micro_sec_per_cycle.into())
+                        as u64;
+
+                    let scheduled_point = issued_programs
+                        .iter()
+                        .map(|(_, schedule)| schedule.z as u64)
+                        .min()
+                        .unwrap_or(u64::MAX);
+
+                    for (job_id, schedule) in issued_programs {
+                        let job = &self.job_list[job_id as usize];
+                        if (schedule.z as u64) < self.env.global_pc() {
+                            return Err(QMPError::ViolateTimingConstraint.into());
+                        }
+                        if job_id as usize >= self.job_list.len()
+                            || job.status() != &JobStatus::Waiting
+                        {
+                            return Err(QMPError::invalid_job_id(job_id));
+                        }
+                        let scheduled_program = apply_schedule(&job.program, &schedule);
+                        if !self.env.issue_program(&scheduled_program) {
+                            return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
+                        }
+
+                        let waiting_time = self.simulation_time - job.requested_time;
+                        let turnaround_time = waiting_time + scheduled_program.burst_time();
+                        let issued_job = IssuedJob {
+                            job_id: job.id,
+                            program: if self.config.no_output_program {
+                                None
+                            } else {
+                                Some(scheduled_program)
+                            },
+                            schedule,
+                            requested_time: job.requested_time,
+                            waiting_time,
+                            turnaround_time,
+                        };
+                        result.push(issued_job);
+                        self.job_list[job_id as usize].update_status(JobStatus::Scheduled);
+                    }
+
+                    // When the program point specified by the scheduler (= minimum z position of schedules) is reached,
+                    // program execution is stopped until the result is returned.
+                    let cycle_count_to_scheduled_point = scheduled_point - self.env.global_pc();
+                    if cycle_count_to_scheduled_point < elapsed_cycles {
+                        self.event_que.add_event(Event::suspend_exec(
+                            scheduled_point,
+                            elapsed_cycles - cycle_count_to_scheduled_point,
+                        ));
+                    }
+                    // We don't update `simulation_time` by elapsed_cycles here because the scheduler
+                    // runs concurrently.
+
+                    self.event_que.add_event(Event::start_scheduling(
+                        self.simulation_time + elapsed_cycle,
+                    ));
                 }
-
-                let waiting_time = self.simulation_time - job.requested_time;
-                let turnaround_time = waiting_time + scheduled_program.burst_time();
-                let issued_job = IssuedJob {
-                    job_id: job.id,
-                    program: if self.config.no_output_program {
-                        None
-                    } else {
-                        Some(scheduled_program)
-                    },
-                    schedule,
-                    requested_time: job.requested_time,
-                    waiting_time,
-                    turnaround_time,
-                };
-                result.push(issued_job);
-                self.waiting_jobs.remove(&job_id);
-            }
-
-            // When the program point specified by the scheduler (= minimum z position of schedules) is reached, program execution is stopped until the result is returned.
-            let count_to_scheduled_point = scheduled_point - self.env.program_counter();
-            if count_to_scheduled_point < elapsed_cycles {
-                self.log_event(Event::suspend_exec(
-                    scheduled_point,
-                    elapsed_cycles - count_to_scheduled_point,
-                ));
-                self.env.incr_pc(count_to_scheduled_point);
-            } else {
-                self.env.incr_pc(elapsed_cycles);
+                EventType::SuspendExec { duration } => {
+                    self.env.add_suspend_cycle(*duration);
+                }
             }
         }
 
+        // All jobs must be either running or finished
+        assert!(self
+            .job_list
+            .iter()
+            .all(|job| job.status() != &JobStatus::Waiting));
+
         // Consume remaining program execution
-        self.simulation_time += self.env.end_cycle() - self.env.program_counter();
+        self.simulation_time += self.env.remaining_cycles();
 
         Ok(SimulationResult {
             jobs: result,

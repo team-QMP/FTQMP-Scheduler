@@ -73,7 +73,7 @@ impl Scheduler for FastGreedyScheduler {
 
     fn run(&mut self, env: &Environment) -> Vec<(JobID, Schedule)> {
         self.location_candidates
-            .retain(|c| c.z as u64 >= env.program_counter());
+            .retain(|c| c.z as u64 >= env.global_pc());
 
         let mut res = Vec::new();
         let mut scheduled_programs = Vec::new(); // programs to be issued in this scheduling

@@ -6,9 +6,11 @@ pub struct Environment {
     size_x: i32,
     size_y: i32,
     /// The maximum z position of issued programs + 1.
-    end_cycle: u64,
-    /// The program counter (i.e., $z$ position) currently executing
+    end_pc: u64,
+    /// The global program counter (i.e., $z$ position)
+    /// TODO: add program counter to each program (or job)
     program_counter: u64,
+    suspend_cycle: u64,
 }
 
 impl Environment {
@@ -17,8 +19,9 @@ impl Environment {
             issued_programs: Vec::new(),
             size_x,
             size_y,
-            end_cycle: 0,
+            end_pc: 0,
             program_counter: 0,
+            suspend_cycle: 0,
         }
     }
 
@@ -47,13 +50,13 @@ impl Environment {
             match p.format() {
                 ProgramFormat::Polycube(p) => {
                     for b in p.blocks() {
-                        self.end_cycle = u64::max(self.end_cycle, b.z as u64 + 1);
+                        self.end_pc = u64::max(self.end_pc, b.z as u64 + 1);
                     }
                 }
                 ProgramFormat::Cuboid(cs) => {
                     for c in cs {
-                        self.end_cycle =
-                            u64::max(self.end_cycle, c.pos().z as u64 + c.size_z() as u64 + 1);
+                        self.end_pc =
+                            u64::max(self.end_pc, c.pos().z as u64 + c.size_z() as u64 + 1);
                     }
                 }
             }
@@ -65,17 +68,27 @@ impl Environment {
         &self.issued_programs
     }
 
-    pub fn end_cycle(&self) -> u64 {
-        self.end_cycle
+    pub fn end_pc(&self) -> u64 {
+        self.end_pc
     }
 
-    pub fn program_counter(&self) -> u64 {
+    pub fn remaining_cycles(&self) -> u64 {
+        self.end_pc - self.program_counter + self.suspend_cycle
+    }
+
+    /// Returns the global program counter
+    pub fn global_pc(&self) -> u64 {
         self.program_counter
     }
 
-    pub fn incr_pc(&mut self, count: u64) {
-        self.program_counter += count;
-        self.end_cycle = u64::max(self.end_cycle, self.program_counter);
+    pub fn add_suspend_cycle(&mut self, count: u64) {
+        self.suspend_cycle += count;
+    }
+
+    pub fn proceed_cycle(&mut self, count: u64) {
+        let consumed_suspend_cycle = self.suspend_cycle.min(count);
+        self.program_counter += count - consumed_suspend_cycle;
+        self.suspend_cycle -= consumed_suspend_cycle;
     }
 }
 
