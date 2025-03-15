@@ -9,15 +9,12 @@ pub enum EventType {
         job_id: JobID,
     },
     StartScheduling,
-    /// Suspend program execution for a `duration` at time `t`.
-    SuspendExec {
-        duration: u64,
-    },
 }
 
 impl EventType {
     /// Return the priority between events occuring at the same time.
     /// The default priority value is 0.
+    #[allow(unreachable_patterns)]
     pub fn priority(&self) -> i32 {
         match &self {
             EventType::StartScheduling => -1,
@@ -50,13 +47,6 @@ impl Event {
     pub fn start_scheduling(time: u64) -> Self {
         Self {
             event_type: EventType::StartScheduling,
-            time,
-        }
-    }
-
-    pub fn suspend_exec(time: u64, duration: u64) -> Self {
-        Self {
-            event_type: EventType::SuspendExec { duration },
             time,
         }
     }

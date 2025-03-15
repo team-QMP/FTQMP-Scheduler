@@ -67,6 +67,8 @@ impl Simulator {
             job_list.push(job);
             event_que.add_event(Event::request_job(t, i as JobID));
         }
+        // add initial scheduling point
+        event_que.add_event(Event::start_scheduling(0));
 
         Self {
             env: Environment::new(config.size_x as i32, config.size_y as i32),
@@ -74,7 +76,7 @@ impl Simulator {
             scheduler,
             job_list,
             simulation_time: 0,
-            event_que: EventQueue::new(),
+            event_que,
             event_log: Vec::new(),
         }
     }
@@ -83,12 +85,12 @@ impl Simulator {
         let mut result = Vec::new();
 
         while let Some(event) = self.event_que.pop() {
+            println!("Event: {:?}", event);
             let event_time = event.event_time();
             assert!(event_time >= self.simulation_time);
 
-            let elapsed_cycle = event_time - self.simulation_time;
+            self.env.advance_by(event_time - self.simulation_time);
             self.simulation_time = event_time;
-            self.env.proceed_cycle(elapsed_cycle);
 
             match event.event_type() {
                 EventType::RequestJob { job_id } => {
@@ -104,6 +106,10 @@ impl Simulator {
                         .as_micros()
                         .div_ceil(self.config.micro_sec_per_cycle.into())
                         as u64;
+                    let has_scheduled = !issued_programs.is_empty();
+                    if has_scheduled {
+                        tracing::info!("Scheduling took {} cycles", elapsed_cycles);
+                    }
 
                     let scheduled_point = issued_programs
                         .iter()
@@ -146,22 +152,21 @@ impl Simulator {
 
                     // When the program point specified by the scheduler (= minimum z position of schedules) is reached,
                     // program execution is stopped until the result is returned.
-                    let cycle_count_to_scheduled_point = scheduled_point - self.env.global_pc();
-                    if cycle_count_to_scheduled_point < elapsed_cycles {
-                        self.event_que.add_event(Event::suspend_exec(
-                            scheduled_point,
-                            elapsed_cycles - cycle_count_to_scheduled_point,
-                        ));
-                    }
+                    self.env.suspend_at(scheduled_point, self.simulation_time + elapsed_cycles);
                     // We don't update `simulation_time` by elapsed_cycles here because the scheduler
                     // runs concurrently.
 
-                    self.event_que.add_event(Event::start_scheduling(
-                        self.simulation_time + elapsed_cycle,
-                    ));
-                }
-                EventType::SuspendExec { duration } => {
-                    self.env.add_suspend_cycle(*duration);
+                    // If there are waiting jobs, prepare next scheduling
+                    if self.job_list.iter().any(|job| job.status() == &JobStatus::Waiting) {
+                        // If the current job que is empty, then the scheduler waits until the next
+                        // event will occur
+                        let next_scheduling_time = if has_scheduled {
+                            self.simulation_time + elapsed_cycles
+                        } else {
+                            self.event_que.next_event_time().expect("there must be remaining job")
+                        };
+                        self.event_que.add_event(Event::start_scheduling(next_scheduling_time));
+                    }
                 }
             }
         }

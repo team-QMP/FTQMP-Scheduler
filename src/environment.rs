@@ -1,4 +1,5 @@
-use crate::program::{is_overlap, Program, ProgramFormat};
+use std::collections::BTreeMap;
+use crate::program::{is_overlap, Program, ProgramCounter, ProgramFormat};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -7,10 +8,13 @@ pub struct Environment {
     size_y: i32,
     /// The maximum z position of issued programs + 1.
     end_pc: u64,
-    /// The global program counter (i.e., $z$ position)
+    /// The global time in cycles. This is not equal to the program counter because the program counter may
+    /// suspended during execution.
+    current_time: u64,
+    /// The global program counter (i.e., $z$ position) in cycles.
     /// TODO: add program counter to each program (or job)
     program_counter: u64,
-    suspend_cycle: u64,
+    suspend_until: BTreeMap<u64, ProgramCounter>,
 }
 
 impl Environment {
@@ -20,8 +24,9 @@ impl Environment {
             size_x,
             size_y,
             end_pc: 0,
+            current_time: 0,
             program_counter: 0,
-            suspend_cycle: 0,
+            suspend_until: BTreeMap::new(),
         }
     }
 
@@ -73,7 +78,24 @@ impl Environment {
     }
 
     pub fn remaining_cycles(&self) -> u64 {
-        self.end_pc - self.program_counter + self.suspend_cycle
+        let mut result = 0;
+        let mut tmp_current_time = self.current_time;
+        let mut tmp_program_counter = self.program_counter;
+        for (suspend_point, until) in &self.suspend_until {
+            assert!(*suspend_point >= tmp_program_counter);
+            let tmp_advance_cycles = suspend_point - tmp_program_counter;
+            result += tmp_advance_cycles;
+            tmp_current_time += tmp_advance_cycles;
+            tmp_program_counter = *suspend_point;
+            let wait_cycles = if *until > tmp_current_time {
+                until - tmp_current_time
+            } else {
+                0
+            };
+            result += wait_cycles;
+            tmp_current_time = *until;
+        }
+        result
     }
 
     /// Returns the global program counter
@@ -81,14 +103,43 @@ impl Environment {
         self.program_counter
     }
 
-    pub fn add_suspend_cycle(&mut self, count: u64) {
-        self.suspend_cycle += count;
+    pub fn suspend_at(&mut self, suspend_point: ProgramCounter, until: u64) {
+        assert!(self.program_counter <= suspend_point);
+        if let Some(c) = self.suspend_until.get_mut(&suspend_point) {
+            *c = (*c).max(until);
+        } else {
+            self.suspend_until.insert(suspend_point, until);
+        }
     }
 
-    pub fn proceed_cycle(&mut self, count: u64) {
-        let consumed_suspend_cycle = self.suspend_cycle.min(count);
-        self.program_counter += count - consumed_suspend_cycle;
-        self.suspend_cycle -= consumed_suspend_cycle;
+    pub fn advance_by(&mut self, mut advance_cycles: u64) {
+        // TODO: refactoring?
+        loop {
+            if let Some((suspend_point, until)) = self.suspend_until.pop_first() {
+                if self.program_counter + advance_cycles > suspend_point {
+                    // proceed to the suspend point
+                    let tmp_advance_cycles = self.program_counter + advance_cycles - suspend_point;
+                    self.current_time += tmp_advance_cycles;
+                    self.program_counter = suspend_point;
+                    advance_cycles -= tmp_advance_cycles;
+                    // then wait
+                    let wait_cycles = if until > self.current_time {
+                        advance_cycles.min(until - self.current_time)
+                    } else {
+                        0
+                    };
+                    advance_cycles -= wait_cycles;
+                } else {
+                    // leave the entry
+                    self.suspend_until.insert(suspend_point, until);
+                    break;
+                }
+            } else {
+                self.current_time += advance_cycles;
+                self.program_counter += advance_cycles;
+                break;
+            }
+        }
     }
 }
 
