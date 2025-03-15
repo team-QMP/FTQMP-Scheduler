@@ -88,6 +88,9 @@ impl Environment {
         let mut tmp_current_time = self.current_time;
         let mut tmp_program_counter = self.program_counter;
         for (suspend_point, until) in &self.suspend_until {
+            if *suspend_point >= self.end_pc {
+                break;
+            }
             assert!(*suspend_point >= tmp_program_counter);
             let tmp_advance_cycles = *suspend_point - tmp_program_counter;
             result += tmp_advance_cycles;
@@ -148,12 +151,14 @@ impl Environment {
         self.program_counter += advance_cycles;
     }
 
-    pub fn defrag(&mut self, defrag_point: ProgramCounter) {
+    // Perform defragmentation in the current program counter
+    pub fn defrag(&mut self) {
         // TODO: more efficient implementation?
         let (below, above) = self.issued_programs.iter().fold(
             (Vec::new(), Vec::new()),
             |(mut below, mut above), program| {
-                let (below_c, above_c) = cut_program_at_z(program.clone(), defrag_point as i32);
+                let (below_c, above_c) =
+                    cut_program_at_z(program.clone(), self.program_counter as i32);
                 if let Some(below_c) = below_c {
                     below.push(below_c);
                 }
@@ -168,7 +173,7 @@ impl Environment {
         self.issued_programs.extend(drop_programs(above));
 
         let cost_of_defrag = (self.size_x + self.size_y) as ProgramCounter; // worst scenario
-        self.suspend_at(defrag_point, self.current_time + cost_of_defrag);
+        self.suspend_at(self.program_counter, self.current_time + cost_of_defrag);
     }
 }
 

@@ -90,6 +90,15 @@ impl Simulator {
         let mut result = Vec::new();
 
         while let Some(event) = self.event_que.pop() {
+            // If all jobs have been scheduled, we ignore the remaining event because they does not
+            // affect the simulation result.
+            if self
+                .job_list
+                .iter()
+                .all(|job| job.status() != &JobStatus::Waiting)
+            {
+                break;
+            }
             tracing::debug!("Event occur: {:?}", event);
             let event_time = event.event_time();
             assert!(event_time >= self.simulation_time);
@@ -187,7 +196,7 @@ impl Simulator {
                     }
                 }
                 EventType::Defragmentation => {
-                    self.env.defrag(self.env.current_time());
+                    self.env.defrag();
                     self.event_que.add_event(Event::defragmentation(
                         self.simulation_time + self.config.defrag_interval.unwrap(),
                     ))
