@@ -85,7 +85,7 @@ impl Simulator {
         let mut result = Vec::new();
 
         while let Some(event) = self.event_que.pop() {
-            println!("Event: {:?}", event);
+            tracing::debug!("Event occur: {:?}", event);
             let event_time = event.event_time();
             assert!(event_time >= self.simulation_time);
 
