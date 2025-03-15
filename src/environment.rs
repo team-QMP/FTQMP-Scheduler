@@ -1,4 +1,5 @@
-use crate::program::{is_overlap, Program, ProgramFormat};
+use crate::program::{is_overlap, Program, ProgramCounter, ProgramFormat};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -6,9 +7,14 @@ pub struct Environment {
     size_x: i32,
     size_y: i32,
     /// The maximum z position of issued programs + 1.
-    end_cycle: u64,
-    /// The program counter (i.e., $z$ position) currently executing
+    end_pc: u64,
+    /// The global time in cycles. This is not equal to the program counter because the program counter may
+    /// suspended during execution.
+    current_time: u64,
+    /// The global program counter (i.e., $z$ position) in cycles.
+    /// TODO: add program counter to each program (or job)
     program_counter: u64,
+    suspend_until: BTreeMap<u64, ProgramCounter>,
 }
 
 impl Environment {
@@ -17,8 +23,10 @@ impl Environment {
             issued_programs: Vec::new(),
             size_x,
             size_y,
-            end_cycle: 0,
+            end_pc: 0,
+            current_time: 0,
             program_counter: 0,
+            suspend_until: BTreeMap::new(),
         }
     }
 
@@ -47,13 +55,13 @@ impl Environment {
             match p.format() {
                 ProgramFormat::Polycube(p) => {
                     for b in p.blocks() {
-                        self.end_cycle = u64::max(self.end_cycle, b.z as u64 + 1);
+                        self.end_pc = u64::max(self.end_pc, b.z as u64 + 1);
                     }
                 }
                 ProgramFormat::Cuboid(cs) => {
                     for c in cs {
-                        self.end_cycle =
-                            u64::max(self.end_cycle, c.pos().z as u64 + c.size_z() as u64 + 1);
+                        self.end_pc =
+                            u64::max(self.end_pc, c.pos().z as u64 + c.size_z() as u64 + 1);
                     }
                 }
             }
@@ -65,17 +73,77 @@ impl Environment {
         &self.issued_programs
     }
 
-    pub fn end_cycle(&self) -> u64 {
-        self.end_cycle
+    pub fn end_pc(&self) -> u64 {
+        self.end_pc
     }
 
-    pub fn program_counter(&self) -> u64 {
+    pub fn current_time(&self) -> u64 {
+        self.current_time
+    }
+
+    pub fn remaining_cycles(&self) -> u64 {
+        let mut result = 0;
+        let mut tmp_current_time = self.current_time;
+        let mut tmp_program_counter = self.program_counter;
+        for (suspend_point, until) in &self.suspend_until {
+            assert!(*suspend_point >= tmp_program_counter);
+            let tmp_advance_cycles = *suspend_point - tmp_program_counter;
+            result += tmp_advance_cycles;
+            tmp_current_time += tmp_advance_cycles;
+            tmp_program_counter = *suspend_point;
+            let wait_cycles = if *until > tmp_current_time {
+                until - tmp_current_time
+            } else {
+                0
+            };
+            result += wait_cycles;
+            tmp_current_time += wait_cycles;
+        }
+        result += self.end_pc() - tmp_program_counter;
+
+        result
+    }
+
+    /// Returns the global program counter
+    pub fn global_pc(&self) -> u64 {
         self.program_counter
     }
 
-    pub fn incr_pc(&mut self, count: u64) {
-        self.program_counter += count;
-        self.end_cycle = u64::max(self.end_cycle, self.program_counter);
+    pub fn suspend_at(&mut self, suspend_point: ProgramCounter, until: u64) {
+        assert!(self.program_counter <= suspend_point);
+        if let Some(c) = self.suspend_until.get_mut(&suspend_point) {
+            *c = (*c).max(until);
+        } else {
+            self.suspend_until.insert(suspend_point, until);
+        }
+    }
+
+    pub fn advance_by(&mut self, mut advance_cycles: u64) {
+        // TODO: refactoring?
+        while let Some((suspend_point, until)) = self.suspend_until.pop_first() {
+            if self.program_counter + advance_cycles > suspend_point {
+                // proceed to the suspend point
+                let tmp_advance_cycles = self.program_counter + advance_cycles - suspend_point;
+                self.current_time += tmp_advance_cycles;
+                self.program_counter = suspend_point;
+                advance_cycles -= tmp_advance_cycles;
+                // then wait
+                let wait_cycles = if until > self.current_time {
+                    advance_cycles.min(until - self.current_time)
+                } else {
+                    0
+                };
+                self.current_time += wait_cycles;
+                advance_cycles -= wait_cycles;
+            } else {
+                // leave the entry
+                self.suspend_until.insert(suspend_point, until);
+                break;
+            }
+        }
+
+        self.current_time += advance_cycles;
+        self.program_counter += advance_cycles;
     }
 }
 

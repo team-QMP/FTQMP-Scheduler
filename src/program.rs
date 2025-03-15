@@ -6,6 +6,8 @@ pub use polycube::{Coordinate, Polycube};
 
 use serde::{Deserialize, Serialize};
 
+pub type ProgramCounter = u64;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ProgramFormat {
     Polycube(Polycube),
@@ -54,7 +56,7 @@ impl Program {
         match &self.format {
             ProgramFormat::Polycube(poly) => {
                 assert!(poly.max_z() >= poly.min_z());
-                (poly.max_z() - poly.min_z()) as u64
+                (poly.max_z() - poly.min_z() + 1) as u64
             }
             ProgramFormat::Cuboid(cs) => {
                 let (min_z, max_z) = cs.iter().fold((u64::MAX, u64::MIN), |(min_z, max_z), c| {
