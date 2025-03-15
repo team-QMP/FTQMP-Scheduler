@@ -5,9 +5,7 @@ use std::collections::BinaryHeap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum EventType {
-    RequestJob {
-        job_id: JobID,
-    },
+    RequestJob { job_id: JobID },
     StartScheduling,
 }
 

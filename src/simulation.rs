@@ -152,20 +152,28 @@ impl Simulator {
 
                     // When the program point specified by the scheduler (= minimum z position of schedules) is reached,
                     // program execution is stopped until the result is returned.
-                    self.env.suspend_at(scheduled_point, self.simulation_time + elapsed_cycles);
+                    self.env
+                        .suspend_at(scheduled_point, self.simulation_time + elapsed_cycles);
                     // We don't update `simulation_time` by elapsed_cycles here because the scheduler
                     // runs concurrently.
 
                     // If there are waiting jobs, prepare next scheduling
-                    if self.job_list.iter().any(|job| job.status() == &JobStatus::Waiting) {
+                    if self
+                        .job_list
+                        .iter()
+                        .any(|job| job.status() == &JobStatus::Waiting)
+                    {
                         // If the current job que is empty, then the scheduler waits until the next
                         // event will occur
                         let next_scheduling_time = if has_scheduled {
                             self.simulation_time + elapsed_cycles
                         } else {
-                            self.event_que.next_event_time().expect("there must be remaining job")
+                            self.event_que
+                                .next_event_time()
+                                .expect("there must be remaining job")
                         };
-                        self.event_que.add_event(Event::start_scheduling(next_scheduling_time));
+                        self.event_que
+                            .add_event(Event::start_scheduling(next_scheduling_time));
                     }
                 }
             }

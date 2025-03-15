@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use crate::program::{is_overlap, Program, ProgramCounter, ProgramFormat};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
