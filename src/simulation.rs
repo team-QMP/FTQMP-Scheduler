@@ -91,6 +91,7 @@ impl Simulator {
 
             self.env.advance_by(event_time - self.simulation_time);
             self.simulation_time = event_time;
+            assert!(self.env.current_time() == self.simulation_time);
 
             match event.event_type() {
                 EventType::RequestJob { job_id } => {
@@ -120,7 +121,7 @@ impl Simulator {
                         continue;
                     }
 
-                    tracing::info!("Scheduling took {} cycles", elapsed_cycles);
+                    tracing::debug!("Scheduling took {} cycles", elapsed_cycles);
 
                     let scheduled_point = issued_programs
                         .iter()
@@ -189,7 +190,7 @@ impl Simulator {
             .all(|job| job.status() != &JobStatus::Waiting));
 
         // Consume remaining program execution
-        tracing::info!("#remaining cycles = {}", self.env.remaining_cycles());
+        tracing::debug!("#remaining cycles = {}", self.env.remaining_cycles());
         self.simulation_time += self.env.remaining_cycles();
 
         Ok(SimulationResult {

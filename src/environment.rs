@@ -77,6 +77,10 @@ impl Environment {
         self.end_pc
     }
 
+    pub fn current_time(&self) -> u64 {
+        self.current_time
+    }
+
     pub fn remaining_cycles(&self) -> u64 {
         let mut result = 0;
         let mut tmp_current_time = self.current_time;
@@ -93,7 +97,7 @@ impl Environment {
                 0
             };
             result += wait_cycles;
-            tmp_current_time = *until;
+            tmp_current_time += wait_cycles;
         }
         result += self.end_pc() - tmp_program_counter;
 
@@ -130,6 +134,7 @@ impl Environment {
                     } else {
                         0
                     };
+                    self.current_time += wait_cycles;
                     advance_cycles -= wait_cycles;
                 } else {
                     // leave the entry
