@@ -1,4 +1,6 @@
-use crate::program::{is_overlap, Program, ProgramCounter, ProgramFormat};
+use crate::program::{
+    cut_program_at_z, is_overlap, Cuboid, Program, ProgramCounter, ProgramFormat,
+};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
@@ -145,12 +147,90 @@ impl Environment {
         self.current_time += advance_cycles;
         self.program_counter += advance_cycles;
     }
+
+    pub fn defrag(&mut self, defrag_point: ProgramCounter) {
+        // TODO: more efficient implementation?
+        let (below, above) = self.issued_programs.iter().fold(
+            (Vec::new(), Vec::new()),
+            |(mut below, mut above), program| {
+                let (below_c, above_c) = cut_program_at_z(program.clone(), defrag_point as i32);
+                if let Some(below_c) = below_c {
+                    below.push(below_c);
+                }
+                if let Some(above_c) = above_c {
+                    above.push(above_c);
+                }
+                (below, above)
+            },
+        );
+        self.issued_programs.clear();
+        self.issued_programs.extend(below);
+        self.issued_programs.extend(drop_programs(above));
+
+        let cost_of_defrag = (self.size_x + self.size_y) as ProgramCounter; // worst scenario
+        self.suspend_at(defrag_point, self.current_time + cost_of_defrag);
+    }
+}
+
+/// All program must be represented by a single cuboid.
+/// TODO: Support other representations?
+fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
+    let mut cuboids: Vec<_> = programs
+        .into_iter()
+        .map(|p| {
+            assert!(p.cuboid().map_or(false, |c| c.len() == 1));
+            p.cuboid().unwrap()[0].clone()
+        })
+        .collect();
+
+    // drop by y position
+    cuboids.sort_by_key(|c| c.y1());
+    let mut cs_drop_x: Vec<Cuboid> = Vec::new();
+    for mut c in cuboids {
+        let mut new_y1 = 0;
+        for other in &cs_drop_x {
+            if !(c.x2() <= other.x1()
+                || c.x1() >= other.x2()
+                || c.z2() <= other.z1()
+                || c.z1() >= other.z2())
+            {
+                new_y1 = new_y1.max(other.y2());
+            }
+        }
+        c.update_y1(new_y1);
+        cs_drop_x.push(c);
+    }
+
+    // drop by x position
+    cs_drop_x.sort_by_key(|c| c.x1());
+    let mut result: Vec<Cuboid> = Vec::new();
+    for mut c in cs_drop_x {
+        let mut new_x1 = 0;
+        for other in &result {
+            if !(c.y2() <= other.y1()
+                || c.y1() >= other.y2()
+                || c.z2() <= other.z1()
+                || c.z1() >= other.z2())
+            {
+                new_x1 = new_x1.max(other.x2());
+            }
+        }
+        c.update_x1(new_x1);
+        result.push(c.clone());
+    }
+
+    result
+        .into_iter()
+        .map(|c| Program::new(ProgramFormat::Cuboid(vec![c])))
+        .collect()
 }
 
 #[cfg(test)]
 mod test {
     use crate::environment::Environment;
-    use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
+    use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
+
+    use super::drop_programs;
 
     #[test]
     fn test_environment_add_polycube() {
@@ -172,5 +252,29 @@ mod test {
 
         let expected = vec![p1, p2];
         assert_eq!(env.issued_programs(), &expected);
+    }
+
+    #[test]
+    fn test_drop_programs() {
+        let c1 = Cuboid::new(Coordinate::new(0, 1, 0), 2, 2, 2);
+        let c2 = Cuboid::new(Coordinate::new(2, 0, 0), 2, 2, 2);
+        let c3 = Cuboid::new(Coordinate::new(1, 3, 1), 2, 2, 2);
+        let p1 = Program::new(ProgramFormat::Cuboid(vec![c1]));
+        let p2 = Program::new(ProgramFormat::Cuboid(vec![c2]));
+        let p3 = Program::new(ProgramFormat::Cuboid(vec![c3]));
+
+        let ps = drop_programs(vec![p1, p2, p3]);
+
+        let c1_moved = Cuboid::new(Coordinate::new(0, 0, 0), 2, 2, 2);
+        let c2_moved = Cuboid::new(Coordinate::new(2, 0, 0), 2, 2, 2);
+        let c3_moved = Cuboid::new(Coordinate::new(0, 2, 1), 2, 2, 2);
+        let p1_moved = Program::new(ProgramFormat::Cuboid(vec![c1_moved]));
+        let p2_moved = Program::new(ProgramFormat::Cuboid(vec![c2_moved]));
+        let p3_moved = Program::new(ProgramFormat::Cuboid(vec![c3_moved]));
+        eprintln!("{:?}", ps);
+
+        assert!(ps.contains(&p1_moved));
+        assert!(ps.contains(&p2_moved));
+        assert!(ps.contains(&p3_moved));
     }
 }

@@ -37,15 +37,51 @@ impl Cuboid {
     pub fn pos(&self) -> &Coordinate {
         &self.pos
     }
+
+    pub fn x1(&self) -> i32 {
+        self.pos.x
+    }
+
+    pub fn x2(&self) -> i32 {
+        self.pos.x + (self.size_x as i32)
+    }
+
+    pub fn y1(&self) -> i32 {
+        self.pos.y
+    }
+
+    pub fn y2(&self) -> i32 {
+        self.pos.y + (self.size_y as i32)
+    }
+
+    pub fn z1(&self) -> i32 {
+        self.pos.z
+    }
+
+    pub fn z2(&self) -> i32 {
+        self.pos.z + (self.size_z as i32)
+    }
+
     pub fn size_x(&self) -> usize {
         self.size_x
     }
+
     pub fn size_y(&self) -> usize {
         self.size_y
     }
+
     pub fn size_z(&self) -> usize {
         self.size_z
     }
+
+    pub fn update_x1(&mut self, x: i32) {
+        self.pos.x = x;
+    }
+
+    pub fn update_y1(&mut self, y: i32) {
+        self.pos.y = y;
+    }
+
     pub fn original(&self) -> &Option<Polycube> {
         &self.original
     }
