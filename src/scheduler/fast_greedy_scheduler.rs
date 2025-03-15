@@ -78,6 +78,7 @@ impl Scheduler for FastGreedyScheduler {
             "location candidates num: {}",
             self.location_candidates.len()
         );
+        tracing::debug!("PC = {}", env.global_pc());
 
         let mut res = Vec::new();
         let mut scheduled_programs = Vec::new(); // programs to be issued in this scheduling

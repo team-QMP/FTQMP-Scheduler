@@ -135,11 +135,11 @@ impl Environment {
                     break;
                 }
             } else {
-                self.current_time += advance_cycles;
-                self.program_counter += advance_cycles;
                 break;
             }
         }
+        self.current_time += advance_cycles;
+        self.program_counter += advance_cycles;
     }
 }
 
