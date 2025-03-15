@@ -70,6 +70,11 @@ impl Simulator {
         // add initial scheduling point
         event_que.add_event(Event::start_scheduling(0));
 
+        if config.enable_defrag {
+            let init_defrag_point = config.defrag_interval.unwrap();
+            event_que.add_event(Event::defragmentation(init_defrag_point));
+        }
+
         Self {
             env: Environment::new(config.size_x as i32, config.size_y as i32),
             config,
@@ -180,6 +185,12 @@ impl Simulator {
                         self.event_que
                             .add_event(Event::start_scheduling(next_scheduling_time));
                     }
+                }
+                EventType::Defragmentation => {
+                    self.env.defrag(self.env.current_time());
+                    self.event_que.add_event(Event::defragmentation(
+                        self.simulation_time + self.config.defrag_interval.unwrap(),
+                    ))
                 }
             }
         }
