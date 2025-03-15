@@ -112,7 +112,8 @@ impl Simulator {
                     // If the current job que is empty, then the scheduler waits until the next
                     // event will occur
                     if !has_scheduled {
-                        let next_scheduling_time = self.event_que
+                        let next_scheduling_time = self
+                            .event_que
                             .next_event_time()
                             .expect("there must be remaining job");
                         self.event_que

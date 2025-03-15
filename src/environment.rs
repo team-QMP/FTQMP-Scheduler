@@ -120,31 +120,28 @@ impl Environment {
 
     pub fn advance_by(&mut self, mut advance_cycles: u64) {
         // TODO: refactoring?
-        loop {
-            if let Some((suspend_point, until)) = self.suspend_until.pop_first() {
-                if self.program_counter + advance_cycles > suspend_point {
-                    // proceed to the suspend point
-                    let tmp_advance_cycles = self.program_counter + advance_cycles - suspend_point;
-                    self.current_time += tmp_advance_cycles;
-                    self.program_counter = suspend_point;
-                    advance_cycles -= tmp_advance_cycles;
-                    // then wait
-                    let wait_cycles = if until > self.current_time {
-                        advance_cycles.min(until - self.current_time)
-                    } else {
-                        0
-                    };
-                    self.current_time += wait_cycles;
-                    advance_cycles -= wait_cycles;
+        while let Some((suspend_point, until)) = self.suspend_until.pop_first() {
+            if self.program_counter + advance_cycles > suspend_point {
+                // proceed to the suspend point
+                let tmp_advance_cycles = self.program_counter + advance_cycles - suspend_point;
+                self.current_time += tmp_advance_cycles;
+                self.program_counter = suspend_point;
+                advance_cycles -= tmp_advance_cycles;
+                // then wait
+                let wait_cycles = if until > self.current_time {
+                    advance_cycles.min(until - self.current_time)
                 } else {
-                    // leave the entry
-                    self.suspend_until.insert(suspend_point, until);
-                    break;
-                }
+                    0
+                };
+                self.current_time += wait_cycles;
+                advance_cycles -= wait_cycles;
             } else {
+                // leave the entry
+                self.suspend_until.insert(suspend_point, until);
                 break;
             }
         }
+
         self.current_time += advance_cycles;
         self.program_counter += advance_cycles;
     }
