@@ -83,7 +83,7 @@ impl Environment {
         let mut tmp_program_counter = self.program_counter;
         for (suspend_point, until) in &self.suspend_until {
             assert!(*suspend_point >= tmp_program_counter);
-            let tmp_advance_cycles = suspend_point - tmp_program_counter;
+            let tmp_advance_cycles = *suspend_point - tmp_program_counter;
             result += tmp_advance_cycles;
             tmp_current_time += tmp_advance_cycles;
             tmp_program_counter = *suspend_point;
@@ -95,6 +95,8 @@ impl Environment {
             result += wait_cycles;
             tmp_current_time = *until;
         }
+        result += self.end_pc() - tmp_program_counter;
+
         result
     }
 

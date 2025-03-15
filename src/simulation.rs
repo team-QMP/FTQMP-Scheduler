@@ -107,15 +107,26 @@ impl Simulator {
                         .div_ceil(self.config.micro_sec_per_cycle.into())
                         as u64;
                     let has_scheduled = !issued_programs.is_empty();
-                    if has_scheduled {
-                        tracing::info!("Scheduling took {} cycles", elapsed_cycles);
+
+                    // If the current job que is empty, then the scheduler waits until the next
+                    // event will occur
+                    if !has_scheduled {
+                        let next_scheduling_time = self.event_que
+                            .next_event_time()
+                            .expect("there must be remaining job");
+                        self.event_que
+                            .add_event(Event::start_scheduling(next_scheduling_time));
+
+                        continue;
                     }
+
+                    tracing::info!("Scheduling took {} cycles", elapsed_cycles);
 
                     let scheduled_point = issued_programs
                         .iter()
                         .map(|(_, schedule)| schedule.z as u64)
                         .min()
-                        .unwrap_or(u64::MAX);
+                        .expect("At least one job must be scheduled here");
 
                     for (job_id, schedule) in issued_programs {
                         let job = &self.job_list[job_id as usize];
@@ -163,15 +174,7 @@ impl Simulator {
                         .iter()
                         .any(|job| job.status() == &JobStatus::Waiting)
                     {
-                        // If the current job que is empty, then the scheduler waits until the next
-                        // event will occur
-                        let next_scheduling_time = if has_scheduled {
-                            self.simulation_time + elapsed_cycles
-                        } else {
-                            self.event_que
-                                .next_event_time()
-                                .expect("there must be remaining job")
-                        };
+                        let next_scheduling_time = self.simulation_time + elapsed_cycles;
                         self.event_que
                             .add_event(Event::start_scheduling(next_scheduling_time));
                     }
@@ -186,6 +189,7 @@ impl Simulator {
             .all(|job| job.status() != &JobStatus::Waiting));
 
         // Consume remaining program execution
+        tracing::info!("#remaining cycles = {}", self.env.remaining_cycles());
         self.simulation_time += self.env.remaining_cycles();
 
         Ok(SimulationResult {
