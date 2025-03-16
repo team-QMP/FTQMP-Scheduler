@@ -49,16 +49,15 @@ impl Job {
         match self.program.format() {
             ProgramFormat::Polycube(poly) => (poly.max_z() - poly.min_z() + 1) as ProgramCounter,
             ProgramFormat::Cuboid(cs) => {
-                let (min_z, max_z) = cs.iter().fold(
-                    (ProgramCounter::MAX, ProgramCounter::MIN),
-                    |(min_z, max_z), c| {
-                        (
-                            ProgramCounter::min(min_z, c.pos().z as ProgramCounter),
-                            ProgramCounter::max(max_z, c.pos().z as ProgramCounter),
-                        )
-                    },
-                );
-                max_z - min_z + 1
+                let (z1, z2) =
+                    cs.iter()
+                        .fold((ProgramCounter::MAX, ProgramCounter::MIN), |(z1, z2), c| {
+                            (
+                                z1.min(c.z1() as ProgramCounter),
+                                z2.max(c.z2() as ProgramCounter),
+                            )
+                        });
+                z2 - z1
             }
         }
     }

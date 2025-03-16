@@ -24,9 +24,11 @@ pub struct IssuedJob {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
+    pub event_log: Vec<Event>,
     pub jobs: Vec<IssuedJob>,
     pub total_cycle: u64,
-    pub event_log: Vec<Event>,
+    /// The summation of $z$ length of programs
+    pub z_sum: u64,
 }
 
 pub struct Simulator {
@@ -89,6 +91,7 @@ impl Simulator {
     pub fn run(mut self) -> Result<SimulationResult> {
         let mut result = Vec::new();
 
+        let mut z_sum = 0;
         let mut prev_defrag_point = 0;
 
         while let Some(event) = self.event_que.pop() {
@@ -113,6 +116,7 @@ impl Simulator {
                 EventType::RequestJob { job_id } => {
                     let job_id = *job_id as usize;
                     self.job_list[job_id].update_status(JobStatus::Waiting);
+                    z_sum += self.job_list[job_id].total_execution_cycle();
                     self.scheduler.add_job(self.job_list[job_id].clone());
                 }
                 EventType::StartScheduling => {
@@ -223,6 +227,7 @@ impl Simulator {
         Ok(SimulationResult {
             jobs: result,
             total_cycle: self.simulation_time,
+            z_sum,
             event_log: self.event_log,
         })
     }
