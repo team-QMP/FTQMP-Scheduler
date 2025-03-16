@@ -5,10 +5,13 @@ use crate::program::{is_overlap, Coordinate, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
 use std::collections::VecDeque;
+use std::time::Instant;
 
 pub struct FastGreedyScheduler {
     job_list: VecDeque<Job>,
     config: SimulationConfig,
+    schedule_cycles_sum: u64,
+    schedule_count: u64,
 }
 
 impl FastGreedyScheduler {
@@ -16,6 +19,8 @@ impl FastGreedyScheduler {
         Self {
             job_list: VecDeque::new(),
             config,
+            schedule_cycles_sum: 0,
+            schedule_count: 0,
         }
     }
 
@@ -70,9 +75,20 @@ impl Scheduler for FastGreedyScheduler {
     }
 
     fn run(&mut self, env: &Environment) -> Vec<(JobID, Schedule)> {
+        let est_scheduling_cost = if self.schedule_count == 0 {
+            0
+        } else {
+            self.schedule_cycles_sum / self.schedule_count
+        };
+
+        let start = Instant::now();
+
+        let scheduled_point = env.global_pc() + est_scheduling_cost;
+
         let mut location_candidates: Vec<_> = env
             .running_programs()
             .iter()
+            .filter(|prog| prog.max_z() as u64 >= scheduled_point)
             .flat_map(|prog| {
                 let cuboids = prog.cuboid().unwrap();
                 assert!(cuboids.len() == 1);
@@ -80,7 +96,7 @@ impl Scheduler for FastGreedyScheduler {
                 let x2 = cuboids[0].x2();
                 let y1 = cuboids[0].y1();
                 let y2 = cuboids[0].y2();
-                let z1 = cuboids[0].z1().max(env.global_pc() as i32);
+                let z1 = cuboids[0].z1().max(scheduled_point as i32);
                 let z2 = cuboids[0].z2();
                 vec![
                     Coordinate::new(x2, y1, z1),
@@ -91,9 +107,13 @@ impl Scheduler for FastGreedyScheduler {
             })
             .collect();
         if location_candidates.is_empty() {
-            location_candidates.push(Coordinate::new(0, 0, env.global_pc() as i32));
+            location_candidates.push(Coordinate::new(0, 0, scheduled_point as i32));
         }
-        tracing::debug!("#(location candidates) = {}", location_candidates.len());
+        tracing::debug!(
+            "PC = {},  #(location candidates) = {}",
+            env.global_pc(),
+            location_candidates.len()
+        );
 
         let mut res = Vec::new();
         let mut scheduled_programs = Vec::new(); // programs to be issued in this scheduling
@@ -125,6 +145,13 @@ impl Scheduler for FastGreedyScheduler {
             scheduled_programs.push(scheduled_program);
             res.push((job.id, best_schedule));
         }
+
+        let elapsed = start
+            .elapsed()
+            .as_micros()
+            .div_ceil(self.config.micro_sec_per_cycle.into()) as u64;
+        self.schedule_cycles_sum += elapsed;
+        self.schedule_count += 1;
 
         res
     }
