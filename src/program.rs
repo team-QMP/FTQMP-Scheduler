@@ -51,6 +51,13 @@ impl Program {
         &self.format
     }
 
+    pub fn max_z(&self) -> i32 {
+        match self.format() {
+            ProgramFormat::Polycube(p) => p.max_z(),
+            ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.z2() - 1).max().unwrap(),
+        }
+    }
+
     /// Returns the burst time (= execution time) in cycles
     pub fn burst_time(&self) -> u64 {
         match &self.format {

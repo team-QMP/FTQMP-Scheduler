@@ -9,7 +9,6 @@ use std::collections::VecDeque;
 pub struct FastGreedyScheduler {
     job_list: VecDeque<Job>,
     config: SimulationConfig,
-    location_candidates: Vec<Coordinate>,
 }
 
 impl FastGreedyScheduler {
@@ -17,7 +16,6 @@ impl FastGreedyScheduler {
         Self {
             job_list: VecDeque::new(),
             config,
-            location_candidates: vec![Coordinate::new(0, 0, 0)],
         }
     }
 
@@ -72,8 +70,30 @@ impl Scheduler for FastGreedyScheduler {
     }
 
     fn run(&mut self, env: &Environment) -> Vec<(JobID, Schedule)> {
-        self.location_candidates
-            .retain(|c| c.z as u64 >= env.global_pc());
+        let mut location_candidates: Vec<_> = env
+            .running_programs()
+            .iter()
+            .flat_map(|prog| {
+                let cuboids = prog.cuboid().unwrap();
+                assert!(cuboids.len() == 1);
+                let x1 = cuboids[0].x1();
+                let x2 = cuboids[0].x2();
+                let y1 = cuboids[0].y1();
+                let y2 = cuboids[0].y2();
+                let z1 = cuboids[0].z1().max(env.global_pc() as i32);
+                let z2 = cuboids[0].z2();
+                vec![
+                    Coordinate::new(x2, y1, z1),
+                    Coordinate::new(x1, y2, z1),
+                    Coordinate::new(x1, y1, z2),
+                    Coordinate::new(0, 0, z2),
+                ]
+            })
+            .collect();
+        if location_candidates.is_empty() {
+            location_candidates.push(Coordinate::new(0, 0, env.global_pc() as i32));
+        }
+        tracing::debug!("#(location candidates) = {}", location_candidates.len());
 
         let mut res = Vec::new();
         let mut scheduled_programs = Vec::new(); // programs to be issued in this scheduling
@@ -81,31 +101,27 @@ impl Scheduler for FastGreedyScheduler {
         for job in jobs {
             let mut best_it = None;
             let mut best: Option<Schedule> = None;
-            for (i, candidate) in self.location_candidates.iter().enumerate() {
+            for (i, candidate) in location_candidates.iter().enumerate() {
                 for rot in 0..4 {
-                    for flip in [false, true] {
-                        let schedule =
-                            Schedule::new(candidate.x, candidate.y, candidate.z, rot, flip);
-                        let scheduled_program = apply_schedule(&job.program, &schedule);
-                        let is_overlap = scheduled_programs
-                            .iter()
-                            .any(|p| is_overlap(&scheduled_program, p));
-                        if !is_overlap
-                            && env.can_issue(&scheduled_program)
-                            && (best.is_none() || best.clone().unwrap().z > schedule.z)
-                        {
-                            best = Some(schedule);
-                            best_it = Some(i);
-                        }
+                    let schedule = Schedule::new(candidate.x, candidate.y, candidate.z, rot, false);
+                    let scheduled_program = apply_schedule(&job.program, &schedule);
+                    let is_overlap = scheduled_programs
+                        .iter()
+                        .any(|p| is_overlap(&scheduled_program, p));
+                    if !is_overlap
+                        && env.can_issue(&scheduled_program)
+                        && (best.is_none() || best.clone().unwrap().z > schedule.z)
+                    {
+                        best = Some(schedule);
+                        best_it = Some(i);
                     }
                 }
             }
 
             let best_schedule = best.unwrap();
             let scheduled_program = apply_schedule(&job.program, &best_schedule);
-            self.location_candidates.remove(best_it.expect(""));
-            self.location_candidates
-                .extend(create_location_candidate(&scheduled_program));
+            location_candidates.remove(best_it.expect(""));
+            location_candidates.extend(create_location_candidate(&scheduled_program));
             scheduled_programs.push(scheduled_program);
             res.push((job.id, best_schedule));
         }

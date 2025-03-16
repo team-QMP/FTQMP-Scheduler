@@ -5,7 +5,10 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
+    /// All programs assigned by a scheduler
     issued_programs: Vec<Program>,
+    /// All running programs
+    running_programs: Vec<Program>,
     size_x: i32,
     size_y: i32,
     /// The maximum z position of issued programs + 1.
@@ -23,6 +26,7 @@ impl Environment {
     pub fn new(size_x: i32, size_y: i32) -> Self {
         Self {
             issued_programs: Vec::new(),
+            running_programs: Vec::new(),
             size_x,
             size_y,
             end_pc: 0,
@@ -46,7 +50,7 @@ impl Environment {
                     && 0 <= pos.z
             }),
         };
-        let is_overlap = self.issued_programs.iter().any(|p2| is_overlap(p, p2));
+        let is_overlap = self.running_programs.iter().any(|p2| is_overlap(p, p2));
         is_in_range && !is_overlap
     }
 
@@ -54,6 +58,7 @@ impl Environment {
         let can_issue = self.can_issue(p);
         if can_issue {
             self.issued_programs.push(p.clone());
+            self.running_programs.push(p.clone());
             match p.format() {
                 ProgramFormat::Polycube(p) => {
                     for b in p.blocks() {
@@ -73,6 +78,10 @@ impl Environment {
 
     pub fn issued_programs(&self) -> &Vec<Program> {
         &self.issued_programs
+    }
+
+    pub fn running_programs(&self) -> &Vec<Program> {
+        &self.running_programs
     }
 
     pub fn end_pc(&self) -> u64 {
@@ -149,6 +158,9 @@ impl Environment {
 
         self.current_time += advance_cycles;
         self.program_counter += advance_cycles;
+
+        self.running_programs
+            .retain(|program| program.max_z() >= self.program_counter as i32);
     }
 
     // Perform defragmentation in the current program counter
