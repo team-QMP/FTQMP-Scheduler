@@ -89,6 +89,8 @@ impl Simulator {
     pub fn run(mut self) -> Result<SimulationResult> {
         let mut result = Vec::new();
 
+        let mut prev_defrag_point = 0;
+
         while let Some(event) = self.event_que.pop() {
             // If all jobs have been scheduled, we ignore the remaining event because they does not
             // affect the simulation result.
@@ -196,7 +198,11 @@ impl Simulator {
                     }
                 }
                 EventType::Defragmentation => {
-                    self.env.defrag();
+                    let defrag_interval = self.config.defrag_interval.unwrap();
+                    if prev_defrag_point + defrag_interval <= self.env.global_pc() {
+                        self.env.defrag();
+                        prev_defrag_point = self.env.global_pc();
+                    }
                     self.event_que.add_event(Event::defragmentation(
                         self.simulation_time + self.config.defrag_interval.unwrap(),
                     ))
