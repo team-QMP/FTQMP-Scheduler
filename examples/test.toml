@@ -5,6 +5,9 @@ micro_sec_per_cycle = 100
 # (Optional)
 #no_output_program = true
 
+enable_defrag = false
+defrag_interval = 1000
+
 [preprocessor]
 processes = ["convert-to-cuboid"]
 

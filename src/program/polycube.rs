@@ -154,6 +154,10 @@ impl Polycube {
         self.max_z
     }
 
+    pub fn pos(&self) -> Coordinate {
+        Coordinate::new(self.min_x, self.min_y, self.min_z)
+    }
+
     pub fn add_block(&mut self, coord: Coordinate) {
         self.min_x = i32::min(self.min_x, coord.x);
         self.min_y = i32::min(self.min_y, coord.y);

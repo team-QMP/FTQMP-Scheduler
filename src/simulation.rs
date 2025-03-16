@@ -70,6 +70,11 @@ impl Simulator {
         // add initial scheduling point
         event_que.add_event(Event::start_scheduling(0));
 
+        if config.enable_defrag {
+            let init_defrag_point = config.defrag_interval.unwrap();
+            event_que.add_event(Event::defragmentation(init_defrag_point));
+        }
+
         Self {
             env: Environment::new(config.size_x as i32, config.size_y as i32),
             config,
@@ -84,7 +89,18 @@ impl Simulator {
     pub fn run(mut self) -> Result<SimulationResult> {
         let mut result = Vec::new();
 
+        let mut prev_defrag_point = 0;
+
         while let Some(event) = self.event_que.pop() {
+            // If all jobs have been scheduled, we ignore the remaining event because they does not
+            // affect the simulation result.
+            if self
+                .job_list
+                .iter()
+                .all(|job| job.status() != &JobStatus::Waiting)
+            {
+                break;
+            }
             tracing::debug!("Event occur: {:?}", event);
             let event_time = event.event_time();
             assert!(event_time >= self.simulation_time);
@@ -180,6 +196,16 @@ impl Simulator {
                         self.event_que
                             .add_event(Event::start_scheduling(next_scheduling_time));
                     }
+                }
+                EventType::Defragmentation => {
+                    let defrag_interval = self.config.defrag_interval.unwrap();
+                    if prev_defrag_point + defrag_interval <= self.env.global_pc() {
+                        self.env.defrag();
+                        prev_defrag_point = self.env.global_pc();
+                    }
+                    self.event_que.add_event(Event::defragmentation(
+                        self.simulation_time + self.config.defrag_interval.unwrap(),
+                    ))
                 }
             }
         }

@@ -13,6 +13,8 @@ pub struct SimulationConfig {
     pub micro_sec_per_cycle: u64,
     #[serde(default)]
     pub no_output_program: bool,
+    pub enable_defrag: bool,
+    pub defrag_interval: Option<u64>,
     pub preprocessor: PreprocessorConfig,
     pub scheduler: SchedulerConfig,
 }
@@ -51,6 +53,8 @@ pub mod test {
         assert!(config.size_x == 6);
         assert!(config.size_y == 6);
         assert!(config.micro_sec_per_cycle == 100);
+        assert!(!config.enable_defrag);
+        assert!(config.defrag_interval == Some(1000));
         assert!(config.scheduler.kind == SchedulerKind::Greedy);
         assert!(config.scheduler.time_limit == Some(60));
         assert!(config.scheduler.batch_size == Some(3));

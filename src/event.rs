@@ -7,6 +7,7 @@ use std::collections::BinaryHeap;
 pub enum EventType {
     RequestJob { job_id: JobID },
     StartScheduling,
+    Defragmentation,
 }
 
 impl EventType {
@@ -16,7 +17,8 @@ impl EventType {
     pub fn priority(&self) -> i32 {
         match &self {
             EventType::StartScheduling => -1,
-            EventType::RequestJob { .. } => 1,
+            EventType::Defragmentation => 1,
+            EventType::RequestJob { .. } => 2,
             _ => 0,
         }
     }
@@ -45,6 +47,13 @@ impl Event {
     pub fn start_scheduling(time: u64) -> Self {
         Self {
             event_type: EventType::StartScheduling,
+            time,
+        }
+    }
+
+    pub fn defragmentation(time: u64) -> Self {
+        Self {
+            event_type: EventType::Defragmentation,
             time,
         }
     }

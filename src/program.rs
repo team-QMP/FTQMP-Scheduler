@@ -51,6 +51,13 @@ impl Program {
         &self.format
     }
 
+    pub fn max_z(&self) -> i32 {
+        match self.format() {
+            ProgramFormat::Polycube(p) => p.max_z(),
+            ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.z2() - 1).max().unwrap(),
+        }
+    }
+
     /// Returns the burst time (= execution time) in cycles
     pub fn burst_time(&self) -> u64 {
         match &self.format {
@@ -110,5 +117,74 @@ pub fn is_overlap(p1: &Program, p2: &Program) -> bool {
         (ProgramFormat::Cuboid(cs1), ProgramFormat::Cuboid(cs2)) => cs1
             .iter()
             .any(|c1| cs2.iter().any(|c2| is_overlap_cuboids(c1, c2))),
+    }
+}
+
+/// Divide a program into two parts [0, z) and [z, inf].
+pub fn cut_program_at_z(p: Program, z: i32) -> (Option<Program>, Option<Program>) {
+    // TODO: remove .clone
+    match p.format() {
+        ProgramFormat::Polycube(_poly) => {
+            unimplemented!() // currently unsupported
+        }
+        ProgramFormat::Cuboid(cs) => {
+            let mut below = Vec::new();
+            let mut above = Vec::new();
+            for c in cs {
+                if c.pos().z + (c.size_z() as i32) < z {
+                    below.push(c.clone());
+                } else if z <= c.pos().z {
+                    above.push(c.clone());
+                } else {
+                    let below_c = Cuboid::new(
+                        c.pos().clone(),
+                        c.size_x(),
+                        c.size_y(),
+                        (z - c.pos().z) as usize,
+                    );
+                    let above_c = Cuboid::new(
+                        Coordinate::new(c.pos().x, c.pos().y, z),
+                        c.size_x(),
+                        c.size_y(),
+                        c.size_z() - below_c.size_z(),
+                    );
+                    below.push(below_c);
+                    above.push(above_c);
+                }
+            }
+            let below = if below.is_empty() {
+                None
+            } else {
+                let format = ProgramFormat::Cuboid(below);
+                Some(Program::new(format))
+            };
+            let above = if above.is_empty() {
+                None
+            } else {
+                let format = ProgramFormat::Cuboid(above);
+                Some(Program::new(format))
+            };
+            (below, above)
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod test {
+    use crate::program::{cut_program_at_z, Coordinate, Cuboid, Program, ProgramFormat};
+
+    #[test]
+    fn test_cut_program_at_z() {
+        let c1 = Cuboid::new(Coordinate::new(0, 0, 0), 1, 1, 2);
+        let c2 = Cuboid::new(Coordinate::new(0, 0, 2), 1, 1, 3);
+        let c3 = Cuboid::new(Coordinate::new(0, 0, 5), 1, 1, 4);
+        let program = Program::new(ProgramFormat::Cuboid(vec![c1.clone(), c2, c3.clone()]));
+        let (below, above) = cut_program_at_z(program, 3);
+        let below_cs = below.unwrap().cuboid().unwrap().clone();
+        let above_cs = above.unwrap().cuboid().unwrap().clone();
+        let c2_below = Cuboid::new(Coordinate::new(0, 0, 2), 1, 1, 1);
+        let c2_above = Cuboid::new(Coordinate::new(0, 0, 3), 1, 1, 2);
+        assert_eq!(below_cs, vec![c1, c2_below]);
+        assert_eq!(above_cs, vec![c2_above, c3]);
     }
 }
