@@ -6,27 +6,27 @@ use crate::job::Job;
 use crate::program::{Coordinate, Cuboid, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
+#[cfg(not(feature = "with-cplex"))]
+use good_lp::solvers::coin_cbc::CoinCbcProblem;
+#[cfg(feature = "with-cplex")]
+use good_lp::solvers::cplex::CPLEXProblem;
 use good_lp::variable::UnsolvedProblem;
 use good_lp::{
     constraint, variable, variables, Expression, ProblemVariables, Solution, SolverModel, Variable,
 };
-#[cfg(not(feature="with-cplex"))]
-use good_lp::solvers::coin_cbc::CoinCbcProblem;
-#[cfg(feature="with-cplex")]
-use good_lp::solvers::cplex::CPLEXProblem;
 
 use std::collections::{HashMap, VecDeque};
 
 pub struct LPSolverWrapper {
-    #[cfg(not(feature="with-cplex"))]
+    #[cfg(not(feature = "with-cplex"))]
     problem: CoinCbcProblem,
-    #[cfg(feature="with-cplex")]
+    #[cfg(feature = "with-cplex")]
     problem: CPLEXProblem,
 }
 
 impl LPSolverWrapper {
     pub fn new(problem: UnsolvedProblem, time_limit: Option<u32>) -> Self {
-        #[cfg(not(feature="with-cplex"))]
+        #[cfg(not(feature = "with-cplex"))]
         let problem = if let Some(time_limit) = time_limit {
             let mut problem = problem.using(good_lp::coin_cbc);
             problem.set_parameter("sec", &format!("{}", time_limit));
@@ -35,7 +35,7 @@ impl LPSolverWrapper {
             problem.using(good_lp::coin_cbc)
         };
 
-        #[cfg(feature="with-cplex")]
+        #[cfg(feature = "with-cplex")]
         let problem = {
             if let Some(time_limit) = time_limit {
                 let sec = std::time::Duration::new(time_limit.into(), 0);
@@ -48,22 +48,27 @@ impl LPSolverWrapper {
             }
         };
 
-        Self {
-            problem,
-        }
+        Self { problem }
     }
 
     pub fn with(self, c: good_lp::Constraint) -> Self {
-        Self { problem: self.problem.with(c) }
+        Self {
+            problem: self.problem.with(c),
+        }
     }
 
-    #[cfg(not(feature="with-cplex"))]
-    pub fn solve(self) -> Result<<CoinCbcProblem as SolverModel>::Solution, <CoinCbcProblem as SolverModel>::Error> {
+    #[cfg(not(feature = "with-cplex"))]
+    pub fn solve(
+        self,
+    ) -> Result<<CoinCbcProblem as SolverModel>::Solution, <CoinCbcProblem as SolverModel>::Error>
+    {
         self.problem.solve()
     }
 
-    #[cfg(feature="with-cplex")]
-    pub fn solve(self) -> Result<<CPLEXProblem as SolverModel>::Solution, <CPLEXProblem as SolverModel>::Error> {
+    #[cfg(feature = "with-cplex")]
+    pub fn solve(
+        self,
+    ) -> Result<<CPLEXProblem as SolverModel>::Solution, <CPLEXProblem as SolverModel>::Error> {
         self.problem.solve()
     }
 }
