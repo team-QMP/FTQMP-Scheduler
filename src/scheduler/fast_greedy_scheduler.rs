@@ -4,7 +4,7 @@ use crate::job::Job;
 use crate::program::{is_overlap, Coordinate, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::time::Instant;
 
 pub struct FastGreedyScheduler {
@@ -85,6 +85,8 @@ impl Scheduler for FastGreedyScheduler {
 
         let scheduled_point = env.global_pc() + est_scheduling_cost;
 
+        let already_used: HashSet<_> = env.running_programs().iter().map(|p| p.pos()).collect();
+
         let mut location_candidates: Vec<_> = env
             .running_programs()
             .iter()
@@ -104,6 +106,9 @@ impl Scheduler for FastGreedyScheduler {
                     Coordinate::new(x1, y1, z2),
                     Coordinate::new(0, 0, z2),
                 ]
+                .into_iter()
+                .filter(|pos| !already_used.contains(pos))
+                .collect::<Vec<_>>()
             })
             .collect();
         if location_candidates.is_empty() {

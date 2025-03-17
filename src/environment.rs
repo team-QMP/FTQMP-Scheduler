@@ -20,6 +20,8 @@ pub struct Environment {
     /// TODO: add program counter to each program (or job)
     program_counter: u64,
     suspend_until: BTreeMap<u64, ProgramCounter>,
+    /// for defrag
+    next_defrag_cands: Vec<ProgramCounter>,
 }
 
 impl Environment {
@@ -33,11 +35,12 @@ impl Environment {
             current_time: 0,
             program_counter: 0,
             suspend_until: BTreeMap::new(),
+            next_defrag_cands: Vec::new(),
         }
     }
 
-    pub fn can_issue(&self, p: &Program) -> bool {
-        let is_in_range = match p.format() {
+    fn is_in_range(&self, p: &Program) -> bool {
+        match p.format() {
             ProgramFormat::Polycube(polycube) => polycube.blocks().iter().all(|b| {
                 0 <= b.x && b.x < self.size_x && 0 <= b.y && b.y < self.size_y && 0 <= b.z
             }),
@@ -49,9 +52,12 @@ impl Environment {
                     && c.y2() <= self.size_y
                     && 0 <= pos.z
             }),
-        };
+        }
+    }
+
+    pub fn can_issue(&self, p: &Program) -> bool {
         let is_overlap = self.running_programs.iter().any(|p2| is_overlap(p, p2));
-        is_in_range && !is_overlap
+        self.is_in_range(p) && !is_overlap
     }
 
     pub fn issue_program(&mut self, p: &Program) -> bool {
@@ -72,6 +78,7 @@ impl Environment {
                     }
                 }
             }
+            self.next_defrag_cands.push(p.z2() as ProgramCounter);
         }
         can_issue
     }
@@ -164,16 +171,13 @@ impl Environment {
     }
 
     pub fn defrag(&mut self) {
-        let mut candidates: Vec<_> = self.running_programs.iter().map(|p| p.z2()).collect();
-        candidates.sort();
-        candidates.pop(); // ignore the topmost point
-        candidates.dedup();
-        candidates.reverse();
-
-        for z in candidates.iter().take(5) {
-            // TODO
-            self.defrag_at(*z as ProgramCounter);
+        for z in self.next_defrag_cands.clone() {
+            // TODO: remove clone
+            if z >= self.program_counter {
+                self.defrag_at(z as ProgramCounter);
+            }
         }
+        self.next_defrag_cands.clear();
     }
 
     // Perform defragmentation in the given program counter
@@ -194,6 +198,7 @@ impl Environment {
                 (below, above)
             },
         );
+        //tracing::debug!("\n  defrag at {},\n  below: {:?}\n  above: {:?}", defrag_point, below, above);
         self.issued_programs.clear();
         self.issued_programs.extend(below);
         self.issued_programs.extend(drop_programs(above));
@@ -216,6 +221,7 @@ impl Environment {
 
     pub fn validate(&self) {
         for i in 0..self.issued_programs.len() {
+            assert!(self.is_in_range(&self.issued_programs[i]));
             for j in i + 1..self.issued_programs.len() {
                 let p1 = &self.issued_programs[i];
                 let p2 = &self.issued_programs[j];
@@ -242,6 +248,7 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
 
     // drop by y position
     cuboids.sort_by_key(|c| c.y1());
+    //tracing::debug!(" cuboids: {:?}", cuboids);
     let mut cs_drop_x: Vec<Cuboid> = Vec::new();
     for mut c in cuboids {
         let mut new_y1 = 0;
@@ -253,6 +260,9 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
                 new_y1 = new_y1.max(other.y2());
             }
         }
+        //if new_y1 != c.y1() {
+        //    tracing::debug!("move y : {} -> {}", c.y1(), new_y1);
+        //}
         c.update_y1(new_y1);
         cs_drop_x.push(c);
     }
@@ -270,6 +280,9 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
                 new_x1 = new_x1.max(other.x2());
             }
         }
+        //if new_x1 != c.x1() {
+        //    tracing::debug!("move x : {} -> {}", c.x1(), new_x1);
+        //}
         c.update_x1(new_x1);
         result.push(c.clone());
     }
