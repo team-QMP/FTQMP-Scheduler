@@ -51,10 +51,20 @@ impl Program {
         &self.format
     }
 
-    pub fn max_z(&self) -> i32 {
+    pub fn pos(&self) -> Coordinate {
         match self.format() {
-            ProgramFormat::Polycube(p) => p.max_z(),
-            ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.z2() - 1).max().unwrap(),
+            ProgramFormat::Polycube(p) => p.pos(),
+            ProgramFormat::Cuboid(cs) => {
+                assert!(cs.len() == 1);
+                cs[0].pos().clone()
+            }
+        }
+    }
+
+    pub fn z2(&self) -> i32 {
+        match self.format() {
+            ProgramFormat::Polycube(p) => p.max_z() + 1,
+            ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.z2()).max().unwrap(),
         }
     }
 
@@ -86,12 +96,9 @@ pub fn is_overlap_polycubes(p1: &Polycube, p2: &Polycube) -> bool {
 }
 
 pub fn is_overlap_cuboids(c1: &Cuboid, c2: &Cuboid) -> bool {
-    let is_overlap_x = !(c1.pos().x + c1.size_x() as i32 <= c2.pos().x
-        || c2.pos().x + c2.size_x() as i32 <= c1.pos().x);
-    let is_overlap_y = !(c1.pos().y + c1.size_y() as i32 <= c2.pos().y
-        || c2.pos().y + c2.size_y() as i32 <= c1.pos().y);
-    let is_overlap_z = !(c1.pos().z + c1.size_z() as i32 <= c2.pos().z
-        || c2.pos().z + c2.size_z() as i32 <= c1.pos().z);
+    let is_overlap_x = !(c1.x2() <= c2.x1() || c2.x2() <= c1.x1());
+    let is_overlap_y = !(c1.y2() <= c2.y1() || c2.y2() <= c1.y1());
+    let is_overlap_z = !(c1.z2() <= c2.z1() || c2.z2() <= c1.z1());
     is_overlap_x && is_overlap_y && is_overlap_z
 }
 
@@ -131,19 +138,19 @@ pub fn cut_program_at_z(p: Program, z: i32) -> (Option<Program>, Option<Program>
             let mut below = Vec::new();
             let mut above = Vec::new();
             for c in cs {
-                if c.pos().z + (c.size_z() as i32) < z {
+                if c.z2() <= z {
                     below.push(c.clone());
-                } else if z <= c.pos().z {
+                } else if z <= c.z1() {
                     above.push(c.clone());
                 } else {
                     let below_c = Cuboid::new(
                         c.pos().clone(),
                         c.size_x(),
                         c.size_y(),
-                        (z - c.pos().z) as usize,
+                        (z - c.z1()) as usize,
                     );
                     let above_c = Cuboid::new(
-                        Coordinate::new(c.pos().x, c.pos().y, z),
+                        Coordinate::new(c.x1(), c.y1(), z),
                         c.size_x(),
                         c.size_y(),
                         c.size_z() - below_c.size_z(),
