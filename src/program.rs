@@ -51,10 +51,10 @@ impl Program {
         &self.format
     }
 
-    pub fn max_z(&self) -> i32 {
+    pub fn z2(&self) -> i32 {
         match self.format() {
-            ProgramFormat::Polycube(p) => p.max_z(),
-            ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.z2() - 1).max().unwrap(),
+            ProgramFormat::Polycube(p) => p.max_z() + 1,
+            ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.z2()).max().unwrap(),
         }
     }
 
@@ -86,12 +86,9 @@ pub fn is_overlap_polycubes(p1: &Polycube, p2: &Polycube) -> bool {
 }
 
 pub fn is_overlap_cuboids(c1: &Cuboid, c2: &Cuboid) -> bool {
-    let is_overlap_x = !(c1.pos().x + c1.size_x() as i32 <= c2.pos().x
-        || c2.pos().x + c2.size_x() as i32 <= c1.pos().x);
-    let is_overlap_y = !(c1.pos().y + c1.size_y() as i32 <= c2.pos().y
-        || c2.pos().y + c2.size_y() as i32 <= c1.pos().y);
-    let is_overlap_z = !(c1.pos().z + c1.size_z() as i32 <= c2.pos().z
-        || c2.pos().z + c2.size_z() as i32 <= c1.pos().z);
+    let is_overlap_x = !(c1.x2() <= c2.x1() || c2.x2() <= c1.x1());
+    let is_overlap_y = !(c1.y2() <= c2.y1() || c2.y2() <= c1.y1());
+    let is_overlap_z = !(c1.z2() <= c2.z1() || c2.z2() <= c1.z1());
     is_overlap_x && is_overlap_y && is_overlap_z
 }
 

@@ -43,10 +43,10 @@ impl Environment {
             }),
             ProgramFormat::Cuboid(cs) => cs.iter().all(|c| {
                 let pos = c.pos();
-                0 <= pos.x
-                    && pos.x + (c.size_x() as i32) <= self.size_x
-                    && 0 <= pos.y
-                    && pos.y + (c.size_y() as i32) <= self.size_y
+                0 <= c.x1()
+                    && c.x2() <= self.size_x
+                    && 0 <= c.y1()
+                    && c.y2() <= self.size_y
                     && 0 <= pos.z
             }),
         };
@@ -160,17 +160,31 @@ impl Environment {
         self.program_counter += advance_cycles;
 
         self.running_programs
-            .retain(|program| program.max_z() >= self.program_counter as i32);
+            .retain(|program| program.z2() >= self.program_counter as i32);
     }
 
-    // Perform defragmentation in the current program counter
     pub fn defrag(&mut self) {
+        let mut candidates: Vec<_> = self.running_programs.iter().map(|p| p.z2()).collect();
+        candidates.sort();
+        candidates.pop(); // ignore the topmost point
+        candidates.dedup();
+        candidates.reverse();
+
+        for z in candidates.iter().take(5) {
+            // TODO
+            self.defrag_at(*z as ProgramCounter);
+        }
+    }
+
+    // Perform defragmentation in the given program counter
+    pub fn defrag_at(&mut self, defrag_point: ProgramCounter) {
+        assert!(self.program_counter <= defrag_point);
+
         // TODO: more efficient implementation?
         let (below, above) = self.issued_programs.iter().fold(
             (Vec::new(), Vec::new()),
             |(mut below, mut above), program| {
-                let (below_c, above_c) =
-                    cut_program_at_z(program.clone(), self.program_counter as i32);
+                let (below_c, above_c) = cut_program_at_z(program.clone(), defrag_point as i32);
                 if let Some(below_c) = below_c {
                     below.push(below_c);
                 }
@@ -184,8 +198,34 @@ impl Environment {
         self.issued_programs.extend(below);
         self.issued_programs.extend(drop_programs(above));
 
+        self.running_programs = self
+            .issued_programs
+            .iter()
+            .filter_map(|p| {
+                if p.z2() as ProgramCounter > self.program_counter {
+                    Some(p.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
         let cost_of_defrag = (self.size_x + self.size_y) as ProgramCounter; // worst scenario
-        self.suspend_at(self.program_counter, self.current_time + cost_of_defrag);
+        self.suspend_at(defrag_point, self.current_time + cost_of_defrag);
+    }
+
+    pub fn validate(&self) {
+        for i in 0..self.issued_programs.len() {
+            for j in i + 1..self.issued_programs.len() {
+                let p1 = &self.issued_programs[i];
+                let p2 = &self.issued_programs[j];
+                if is_overlap(p1, p2) {
+                    tracing::debug!("{:?}", p1);
+                    tracing::debug!("{:?}", p2);
+                    panic!();
+                }
+            }
+        }
     }
 }
 
@@ -206,11 +246,10 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
     for mut c in cuboids {
         let mut new_y1 = 0;
         for other in &cs_drop_x {
-            if !(c.x2() <= other.x1()
-                || c.x1() >= other.x2()
-                || c.z2() <= other.z1()
-                || c.z1() >= other.z2())
-            {
+            // collision check
+            let is_overlap_x = !(c.x2() <= other.x1() || other.x2() <= c.x1());
+            let is_overlap_z = !(c.z2() <= other.z1() || other.z2() <= c.z1());
+            if is_overlap_x && is_overlap_z {
                 new_y1 = new_y1.max(other.y2());
             }
         }
@@ -224,11 +263,10 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
     for mut c in cs_drop_x {
         let mut new_x1 = 0;
         for other in &result {
-            if !(c.y2() <= other.y1()
-                || c.y1() >= other.y2()
-                || c.z2() <= other.z1()
-                || c.z1() >= other.z2())
-            {
+            // collision check
+            let is_overlap_y = !(c.y2() <= other.y1() || other.y2() <= c.y1());
+            let is_overlap_z = !(c.z2() <= other.z1() || other.z2() <= c.z1());
+            if is_overlap_y && is_overlap_z {
                 new_x1 = new_x1.max(other.x2());
             }
         }

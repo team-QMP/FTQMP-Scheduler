@@ -88,7 +88,7 @@ impl Scheduler for FastGreedyScheduler {
         let mut location_candidates: Vec<_> = env
             .running_programs()
             .iter()
-            .filter(|prog| prog.max_z() as u64 >= scheduled_point)
+            .filter(|prog| prog.z2() as u64 > scheduled_point)
             .flat_map(|prog| {
                 let cuboids = prog.cuboid().unwrap();
                 assert!(cuboids.len() == 1);
