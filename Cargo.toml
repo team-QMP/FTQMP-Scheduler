@@ -3,10 +3,17 @@ name = "qmp_scheduler"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+with-cplex = [
+  "good_lp/cplex-rs",
+  "cplex-rs"
+  ]
+
 [dependencies]
 anyhow = "1.0"
 thiserror = "2"
 clap = { version = "4.5.23", features = ["derive"] }
+cplex-rs = { version = "0.1.7", optional = true }
 good_lp = { version = "1.10.0", features = ["coin_cbc"] }
 kiss3d = "0.32"
 rand = "0.8.5"

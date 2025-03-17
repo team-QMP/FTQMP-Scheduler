@@ -437,6 +437,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "cplex-rs"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d87d9e9e9899da8961c6d87d9b8eabbd1c7b3d35d03a758bff2b11507bc8c9c7"
+dependencies = [
+ "cplex-rs-sys",
+ "log",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "cplex-rs-sys"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e550977e92b6c218bf0d797c9477f102063b74b5dc222009ba52ff68f352b04c"
+dependencies = [
+ "bindgen",
+ "glob",
+ "once_cell",
+]
+
+[[package]]
 name = "crc32fast"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -758,6 +780,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10efcd6c7d6f84cb5b4f9155248e0675deab9cfb92d0edbcb25cb81490b65ae7"
 dependencies = [
  "coin_cbc",
+ "cplex-rs",
  "fnv",
 ]
 
@@ -1548,6 +1571,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "cplex-rs",
  "good_lp",
  "kiss3d",
  "nalgebra 0.32.6",
