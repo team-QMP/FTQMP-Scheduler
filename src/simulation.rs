@@ -30,6 +30,8 @@ pub struct SimulationResult {
     /// The summation of $z$ length of programs
     pub z_sum: u64,
     pub max_z: u64,
+    /// the average response time of a scheduler (in micro sec)
+    avg_response_time: u64,
 }
 
 pub struct Simulator {
@@ -94,6 +96,8 @@ impl Simulator {
 
         let mut z_sum = 0;
         let mut prev_defrag_point = 0;
+        let mut sum_schedule_time = 0;
+        let mut schedule_count = 0;
 
         while let Some(event) = self.event_que.pop() {
             // If all jobs have been scheduled, we ignore the remaining event because they does not
@@ -127,11 +131,11 @@ impl Simulator {
 
                     let start = Instant::now();
                     let issued_programs = self.scheduler.run(&self.env);
-                    let elapsed_cycles = start
-                        .elapsed()
-                        .as_micros()
-                        .div_ceil(self.config.micro_sec_per_cycle.into())
-                        as u64;
+                    let elapsed_msec = start.elapsed().as_micros();
+                    sum_schedule_time += elapsed_msec as u64;
+                    schedule_count += 1;
+                    let elapsed_cycles =
+                        elapsed_msec.div_ceil(self.config.micro_sec_per_cycle.into()) as u64;
                     let has_scheduled = !issued_programs.is_empty();
 
                     // If the current job que is empty, then the scheduler waits until the next
@@ -239,6 +243,7 @@ impl Simulator {
             total_cycle: self.simulation_time,
             z_sum,
             max_z: self.env.end_pc(),
+            avg_response_time: sum_schedule_time / schedule_count,
         })
     }
 
