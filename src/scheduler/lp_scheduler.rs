@@ -6,11 +6,72 @@ use crate::job::Job;
 use crate::program::{Coordinate, Cuboid, Program, ProgramFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
+#[cfg(not(feature = "with-cplex"))]
+use good_lp::solvers::coin_cbc::CoinCbcProblem;
+#[cfg(feature = "with-cplex")]
+use good_lp::solvers::cplex::CPLEXProblem;
+use good_lp::variable::UnsolvedProblem;
 use good_lp::{
     constraint, variable, variables, Expression, ProblemVariables, Solution, SolverModel, Variable,
 };
 
 use std::collections::{HashMap, VecDeque};
+
+pub struct LPSolverWrapper {
+    #[cfg(not(feature = "with-cplex"))]
+    problem: CoinCbcProblem,
+    #[cfg(feature = "with-cplex")]
+    problem: CPLEXProblem,
+}
+
+impl LPSolverWrapper {
+    pub fn new(problem: UnsolvedProblem, time_limit: Option<u32>) -> Self {
+        #[cfg(not(feature = "with-cplex"))]
+        let problem = if let Some(time_limit) = time_limit {
+            let mut problem = problem.using(good_lp::coin_cbc);
+            problem.set_parameter("sec", &format!("{}", time_limit));
+            problem
+        } else {
+            problem.using(good_lp::coin_cbc)
+        };
+
+        #[cfg(feature = "with-cplex")]
+        let problem = {
+            if let Some(time_limit) = time_limit {
+                let sec = std::time::Duration::new(time_limit.into(), 0);
+                let time_limit = cplex_rs::parameters::TimeLimit(sec);
+                let mut cplex_env = cplex_rs::Environment::new().expect("");
+                cplex_env.set_parameter(time_limit).unwrap(); // TODO
+                good_lp::solvers::cplex::cplex_with_env(problem, cplex_env)
+            } else {
+                problem.using(good_lp::solvers::cplex::cplex)
+            }
+        };
+
+        Self { problem }
+    }
+
+    pub fn with(self, c: good_lp::Constraint) -> Self {
+        Self {
+            problem: self.problem.with(c),
+        }
+    }
+
+    #[cfg(not(feature = "with-cplex"))]
+    pub fn solve(
+        self,
+    ) -> Result<<CoinCbcProblem as SolverModel>::Solution, <CoinCbcProblem as SolverModel>::Error>
+    {
+        self.problem.solve()
+    }
+
+    #[cfg(feature = "with-cplex")]
+    pub fn solve(
+        self,
+    ) -> Result<<CPLEXProblem as SolverModel>::Solution, <CPLEXProblem as SolverModel>::Error> {
+        self.problem.solve()
+    }
+}
 
 #[derive(Debug, Clone)]
 struct PackingConfig {
@@ -288,11 +349,7 @@ impl CuboidPackingProblem {
     }
 
     pub fn solve(self) -> Vec<Schedule> {
-        let mut problem = self.vars.minimise(self.v).using(good_lp::coin_cbc);
-
-        if let Some(time_limit) = self.config.time_limit {
-            problem.set_parameter("sec", &format!("{}", time_limit));
-        }
+        let mut problem = LPSolverWrapper::new(self.vars.minimise(self.v), self.config.time_limit);
 
         let max_x = self.config.size_x as i32; // X
         let max_y = self.config.size_y as i32; // Y
@@ -447,16 +504,14 @@ impl Scheduler for LPScheduler {
                 ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.size_z() as u32).sum(),
             })
             .sum::<u32>();
-        let scheduled_point = u64::min(
-            env.end_pc(),
-            env.global_pc() + self.schedule_cycles_sum / u64::max(1, self.scheduled_count),
-        ) as i32;
+        let scheduled_point =
+            (env.global_pc() + self.schedule_cycles_sum / u64::max(1, self.scheduled_count)) as i32;
         let pack_cfg = PackingConfig {
             time_limit: self.config.scheduler.time_limit,
             size_x: self.config.size_x,
             size_y: self.config.size_y,
-            size_z: worst_zsum + env.end_pc() as u32,
-            min_z: scheduled_point,
+            size_z: worst_zsum + env.end_pc().max(scheduled_point as u64) as u32,
+            min_z: scheduled_point as i32,
         };
 
         let jobs = self.take_jobs_by_batch_size();

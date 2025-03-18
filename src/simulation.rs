@@ -29,6 +29,9 @@ pub struct SimulationResult {
     pub total_cycle: u64,
     /// The summation of $z$ length of programs
     pub z_sum: u64,
+    pub max_z: u64,
+    /// the average response time of a scheduler (in micro sec)
+    avg_response_time: u64,
 }
 
 pub struct Simulator {
@@ -72,10 +75,10 @@ impl Simulator {
         // add initial scheduling point
         event_que.add_event(Event::start_scheduling(0));
 
-        if config.enable_defrag {
-            let init_defrag_point = config.defrag_interval.unwrap();
-            event_que.add_event(Event::defragmentation(init_defrag_point));
-        }
+        //if config.enable_defrag {
+        //    let init_defrag_point = config.defrag_interval.unwrap();
+        //    event_que.add_event(Event::defragmentation(init_defrag_point));
+        //}
 
         Self {
             env: Environment::new(config.size_x as i32, config.size_y as i32),
@@ -93,6 +96,8 @@ impl Simulator {
 
         let mut z_sum = 0;
         let mut prev_defrag_point = 0;
+        let mut sum_schedule_time = 0;
+        let mut schedule_count = 0;
 
         while let Some(event) = self.event_que.pop() {
             // If all jobs have been scheduled, we ignore the remaining event because they does not
@@ -120,13 +125,17 @@ impl Simulator {
                     self.scheduler.add_job(self.job_list[job_id].clone());
                 }
                 EventType::StartScheduling => {
+                    if self.config.enable_defrag {
+                        self.env.defrag();
+                    }
+
                     let start = Instant::now();
                     let issued_programs = self.scheduler.run(&self.env);
-                    let elapsed_cycles = start
-                        .elapsed()
-                        .as_micros()
-                        .div_ceil(self.config.micro_sec_per_cycle.into())
-                        as u64;
+                    let elapsed_msec = start.elapsed().as_micros();
+                    sum_schedule_time += elapsed_msec as u64;
+                    schedule_count += 1;
+                    let elapsed_cycles =
+                        elapsed_msec.div_ceil(self.config.micro_sec_per_cycle.into()) as u64;
                     let has_scheduled = !issued_programs.is_empty();
 
                     // If the current job que is empty, then the scheduler waits until the next
@@ -220,15 +229,21 @@ impl Simulator {
             .iter()
             .all(|job| job.status() != &JobStatus::Waiting));
 
+        self.env.validate();
+
         // Consume remaining program execution
         tracing::debug!("#remaining cycles = {}", self.env.remaining_cycles());
         self.simulation_time += self.env.remaining_cycles();
 
+        tracing::debug!("final PC = {}", self.env.end_pc());
+
         Ok(SimulationResult {
+            event_log: self.event_log,
             jobs: result,
             total_cycle: self.simulation_time,
             z_sum,
-            event_log: self.event_log,
+            max_z: self.env.end_pc(),
+            avg_response_time: sum_schedule_time / schedule_count,
         })
     }
 

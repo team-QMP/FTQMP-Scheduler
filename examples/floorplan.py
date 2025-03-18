@@ -6,12 +6,12 @@ from matplotlib.patches import Rectangle
 # Make a floorplan of a quantum processor
 
 def place_surface_code_qubits(
+    random_dataset
     width, height,
     frame,
     num_data_qubits,
     pattern="block25"
 ):
-    """
     プロセッサ格子(width x height)上に量子ビットを配置する。
 
     Parameters
@@ -635,3 +635,4 @@ def auto_floorplan(num_data_qubits, width, pattern = "block25"):
     height = width_to_height_for_num_qubit(num_data_qubits, width, frame = ["bottom","right"])
     floorplan =  place_surface_code_qubits(width = width, height = height, num_data_qubits = num_data_qubits,  frame = ["bottom","right"], pattern = pattern)
     visualize_qubit_layout(floorplan, show_data_indices=True)
+    plt.show()

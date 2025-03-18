@@ -18,7 +18,8 @@ impl From<&Polycube> for Cuboid {
             size_x: (item.max_x() - item.min_x() + 1) as usize,
             size_y: (item.max_y() - item.min_y() + 1) as usize,
             size_z: (item.max_z() - item.min_z() + 1) as usize,
-            original: Some(item.clone()),
+            //original: Some(item.clone()),
+            original: None,
         }
     }
 }
@@ -99,6 +100,6 @@ mod test {
         assert_eq!(cuboid.size_x, 2);
         assert_eq!(cuboid.size_y, 3);
         assert_eq!(cuboid.size_z, 3);
-        assert_eq!(cuboid.original().clone().unwrap(), p);
+        assert_eq!(cuboid.original().clone(), None);
     }
 }

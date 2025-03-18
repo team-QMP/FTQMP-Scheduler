@@ -140,14 +140,14 @@ def random_circuit_modified(
 
     # Apply arbitrary random operations in layers across all qubits.
     for layer_number in range(depth):
-        # We generate all the randomness for the layer in one go, to avoid maheight separate calls to
+        # We generate all the randomness for the layer in one go, to avoid many separate calls to
         # the randomisation routines, which can be fairly slow.
 
         # This reliably draws too much randomness, but it's less expensive than looping over more
         # calls to the rng. After, trim it down by finding the point when we've used all the qubits.
         gate_specs = rng.choice(gates, size=len(qubits))
         cumulative_qubits = np.cumsum(gate_specs["num_qubits"], dtype=np.int64)
-        # Efficiently find the point in the list where the total gates would use as maheight as
+        # Efficiently find the point in the list where the total gates would use as many as
         # possible of, but not more than, the number of qubits in the layer.  If there's slack, fill
         # it with 1q gates.
         max_index = np.searchsorted(cumulative_qubits, num_qubits, side="right")
@@ -333,7 +333,7 @@ def random_circuit_variable_T_ratio(
 
     # Apply arbitrary random operations in layers across all qubits.
     for layer_number in range(depth):
-        # We generate all the randomness for the layer in one go, to avoid maheight separate calls to
+        # We generate all the randomness for the layer in one go, to avoid many separate calls to
         # the randomisation routines, which can be fairly slow.
 
         # This reliably draws too much randomness, but it's less expensive than looping over more
@@ -347,7 +347,8 @@ def random_circuit_variable_T_ratio(
             gate_specs[i] = rng.choice(T_gates)
 
         cumulative_qubits = np.cumsum(gate_specs["num_qubits"], dtype=np.int64)
-        # Efficiently find the point in the list where the total gates would use as maheight as
+
+        # Efficiently find the point in the list where the total gates would use as many as
         # possible of, but not more than, the number of qubits in the layer.  If there's slack, fill
         # it with 1q gates.
         max_index = np.searchsorted(cumulative_qubits, num_qubits, side="right")
