@@ -144,7 +144,7 @@ impl Environment {
         while let Some((suspend_point, until)) = self.suspend_until.pop_first() {
             if self.program_counter + advance_cycles > suspend_point {
                 // proceed to the suspend point
-                let tmp_advance_cycles = self.program_counter + advance_cycles - suspend_point;
+                let tmp_advance_cycles = suspend_point - self.program_counter;
                 self.current_time += tmp_advance_cycles;
                 self.program_counter = suspend_point;
                 advance_cycles -= tmp_advance_cycles;
