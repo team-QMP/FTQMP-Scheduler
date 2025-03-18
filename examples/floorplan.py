@@ -6,19 +6,19 @@ from matplotlib.patches import Rectangle
 # Make a floorplan of a quantum processor
 
 def place_surface_code_qubits(
-    nx, ny,
+    random_dataset
+    width, height,
     frame,
     num_data_qubits,
     pattern="block25"
 ):
-    """
-    プロセッサ格子(nx x ny)上に量子ビットを配置する。
+    プロセッサ格子(width x height)上に量子ビットを配置する。
 
     Parameters
     ----------
-    nx : int
+    width : int
         格子の横幅
-    ny : int
+    height : int
         格子の縦幅
     frame : list of str
         ["top", "bottom", "left", "right"] の中からフレームにしたい辺を指定
@@ -36,8 +36,8 @@ def place_surface_code_qubits(
     -------
     dict
         {
-            "nx": int,
-            "ny": int,
+            "width": int,
+            "height": int,
             "frame_qubits": [(x,y), ...],    # フレームとして固定した量子ビット
             "data_qubits": [(x,y), ...],     # データ量子ビット
             "ancilla_qubits": [(x,y), ...],  # 残りのアンシラ量子ビット(内部)
@@ -45,7 +45,7 @@ def place_surface_code_qubits(
         }
     """
     # 1) まず全セルをアンシラ候補に
-    all_coords = [(x, y) for y in range(ny) for x in range(nx)]
+    all_coords = [(x, y) for y in range(height) for x in range(width)]
     ancilla_qubits = set(all_coords)
     data_qubits = set()
     frame_qubits = set()
@@ -54,11 +54,11 @@ def place_surface_code_qubits(
     def is_in_frame(x, y):
         if "left" in frame and x == 0:
             return True
-        if "right" in frame and x == nx - 1:
+        if "right" in frame and x == width - 1:
             return True
         if "bottom" in frame and y == 0:
             return True
-        if "top" in frame and y == ny - 1:
+        if "top" in frame and y == height - 1:
             return True
         return False
 
@@ -140,13 +140,13 @@ def place_surface_code_qubits(
     ancilla_qubits -= data_qubits
 
     # 7) 充填率 (フレーム込み)
-    total_cells = nx * ny
+    total_cells = width * height
     final_fill_rate = len(data_qubits) / total_cells
 
     # 8) 戻り値
     return {
-        "nx": nx,
-        "ny": ny,
+        "width": width,
+        "height": height,
         "frame_qubits": sorted(frame_qubits),
         "data_qubits": sorted(data_qubits),
         "ancilla_qubits": sorted(ancilla_qubits),
@@ -160,7 +160,7 @@ def place_surface_code_qubits_without_size_const(
     pattern="block25"
 ):
     """
-    プロセッサのサイズ (nx, ny) を指定せず、
+    プロセッサのサイズ (width, height) を指定せず、
     データ量子ビット数とパターンから「必要最小限の内部領域」を自動で決め、
     frame=(["top","bottom","left","right"] のリスト) に従って
     フレームを取り付けたうえで、量子ビット配置を返す。
@@ -184,8 +184,8 @@ def place_surface_code_qubits_without_size_const(
     -------
     dict
         {
-          "nx": int,  # フレームを含む全体幅
-          "ny": int,  # フレームを含む全体高さ
+          "width": int,  # フレームを含む全体幅
+          "height": int,  # フレームを含む全体高さ
           "frame_qubits": [(x,y), ...],
           "data_qubits": [(x,y), ...],
           "ancilla_qubits": [(x,y), ...],
@@ -409,8 +409,8 @@ def place_surface_code_qubits_without_size_const(
     final_fill_rate = len(data_qubits) / total_cells
 
     return {
-        "nx": total_w,
-        "ny": total_h,
+        "width": total_w,
+        "height": total_h,
         "frame_qubits": sorted(frame_qubits),
         "data_qubits": sorted(data_qubits),
         "ancilla_qubits": sorted(ancilla_qubits),
@@ -427,8 +427,8 @@ def visualize_qubit_layout(qubit_dict, show_data_indices=False):
       - show_data_indices=True でデータ量子ビットだけインデックス表示
         (0-based; sorted順)
     """
-    nx = qubit_dict["nx"]
-    ny = qubit_dict["ny"]
+    width = qubit_dict["width"]
+    height = qubit_dict["height"]
     frame_qubits = qubit_dict["frame_qubits"]
     data_qubits_list = qubit_dict["data_qubits"]
     ancilla_qubits = qubit_dict["ancilla_qubits"]
@@ -463,16 +463,16 @@ def visualize_qubit_layout(qubit_dict, show_data_indices=False):
                     ha='center', va='center', fontsize=8, color='black')
 
     # 全体枠 (太線)
-    border = Rectangle((0, 0), nx, ny,
+    border = Rectangle((0, 0), width, height,
                        edgecolor='black', facecolor='none', linewidth=2.0)
     ax.add_patch(border)
 
-    ax.set_xlim(0, nx)
-    ax.set_ylim(0, ny)
-    ax.set_xticks(range(nx+1))
-    ax.set_yticks(range(ny+1))
+    ax.set_xlim(0, width)
+    ax.set_ylim(0, height)
+    ax.set_xticks(range(width+1))
+    ax.set_yticks(range(height+1))
 
-    plt.title(f"Layout: {nx}x{ny}, data={len(data_qubits_list)}, fill={final_rate*100:.1f}%")
+    plt.title(f"Layout: {width}x{height}, data={len(data_qubits_list)}, fill={final_rate*100:.1f}%")
     plt.show()
 
 
@@ -494,8 +494,8 @@ def build_graph_from_qubit_floorplan(layout_dict):
     ----------
     layout_dict : dict
         {
-          "nx": int,
-          "ny": int,
+          "width": int,
+          "height": int,
           "frame_qubits": [(x1,y1), ...],
           "data_qubits": [(x2,y2), ...],
           "ancilla_qubits": [(x3,y3), ...],
@@ -601,4 +601,38 @@ def visualize_qubit_graph(G, show_labels=False):
     plt.yticks(range(min(all_y) - 1, max(all_y) + 2))
 
     plt.title(f"Qubit Graph (nodes={G.number_of_nodes()}, edges={G.number_of_edges()})")
+    plt.show()
+
+def width_to_height_for_num_qubit(num_qubit , width, frame = ["bottom","right"]):
+    # num_qubit量子ビットのプログラムを横幅widthのプロセッサに配置する際の縦幅heightを求める
+    # 1/4の間取り
+    # print("num_qubit:",num_qubit)
+    # print("width:",width)
+    if "left" in frame:
+        width -= 1
+    if "right" in frame:
+        width -= 1
+
+    height = 2 * (num_qubit / math.ceil((width - 1) / 2))
+
+    if "bottom" in frame:
+        height += 1
+    if "top" in frame:
+        height += 1
+
+    return math.ceil(height)
+
+def place_surface_code_qubits_with_fixed_width(
+    width,
+    frame,
+    num_data_qubits,
+    pattern="block25"
+):
+    height = width_to_height_for_num_qubit(num_qubit=num_data_qubits, width=width, frame=frame)
+    return place_surface_code_qubits(width, height, frame, num_data_qubits, pattern)
+
+def auto_floorplan(num_data_qubits, width, pattern = "block25"):
+    height = width_to_height_for_num_qubit(num_data_qubits, width, frame = ["bottom","right"])
+    floorplan =  place_surface_code_qubits(width = width, height = height, num_data_qubits = num_data_qubits,  frame = ["bottom","right"], pattern = pattern)
+    visualize_qubit_layout(floorplan, show_data_indices=True)
     plt.show()

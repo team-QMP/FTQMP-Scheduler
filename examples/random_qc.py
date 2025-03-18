@@ -6,7 +6,7 @@ import numpy as np
 import json
 import random
 import math
-from floorplan import place_surface_code_qubits
+from floorplan import place_surface_code_qubits, place_surface_code_qubits_with_fixed_width, width_to_height_for_num_qubit, visualize_qubit_layout
 from compile_qc_to_ls import qc_to_LS
 from compile_qc_to_ls import LS_to_polycube
 
@@ -347,6 +347,7 @@ def random_circuit_variable_T_ratio(
             gate_specs[i] = rng.choice(T_gates)
 
         cumulative_qubits = np.cumsum(gate_specs["num_qubits"], dtype=np.int64)
+
         # Efficiently find the point in the list where the total gates would use as many as
         # possible of, but not more than, the number of qubits in the layer.  If there's slack, fill
         # it with 1q gates.
@@ -429,9 +430,48 @@ def random_circuit_to_json(unit_time = 50, num_qc = 10, json_file_name = "random
         qc.draw(output = 'mpl')    
         
         # floorplan =  place_surface_code_qubits_without_size_const(num_data_qubits = qc.num_qubits,  frame = ["bottom","right"], pattern = "block25")
-        nx = math.floor(np.sqrt(qc.num_qubits)) * 4 + 1
-        ny = math.floor(np.sqrt(qc.num_qubits)) * 4 + 1
-        floorplan = place_surface_code_qubits(nx=nx,ny=ny, num_data_qubits = qc.num_qubits, frame = ["bottom","right"], pattern = "block25")
+        width = math.floor(np.sqrt(qc.num_qubits)) * 4 + 1
+        height = math.floor(np.sqrt(qc.num_qubits)) * 4 + 1
+        floorplan = place_surface_code_qubits(width=width,height=height, num_data_qubits = qc.num_qubits, frame = ["bottom","right"], pattern = "block25")
+        # visualize_qubit_layout(floorplan, show_data_indices=True)
+        LS =  qc_to_LS(qc, floorplan)
+        polycube = LS_to_polycube(LS, floorplan)
+        program["programs"].append({"Polycube": {"blocks": polycube}})
+        jr.append([t, jobid])
+        jobid += 1
+        
+    program["job_requests"] = jr
+
+    f = open(json_file_name, "w")
+    json.dump(program, f, ensure_ascii=False, indent = 4)
+    f.close()
+    print("saved as:", json_file_name)
+    return True
+
+def random_circuit_to_json_with_fixed_width(width, unit_time = 50, num_qc = 100, num_qubits = [5,100], layers = [10,200],json_file_name = "random_program_with_fixed_witdth.json"):
+    """
+    Generate random quantum circuits and save them as a json file for the polycube program.
+    Args:
+        unit_time (int): unit time for interval
+        num_qc (int): number of quantum circuits
+        json_file_name (str): name of the json file
+    """
+
+    # initial time
+    t = 0
+    jobid = 0
+    program = {"programs": []}
+
+    jr = []
+
+    for i in range(num_qc):
+        t += random.randint(1, 4) * unit_time  # interval
+
+        random_num_qubits = random.randint(num_qubits[0], num_qubits[1])
+        random_layers = random.randint(layers[0], layers[1])
+        random_T_ratio = random.uniform(0, 1)
+        qc = random_circuit_variable_T_ratio(num_qubits=random_num_qubits, depth=random_layers, seed=None, T_gate_ratio=random_T_ratio)
+        floorplan = place_surface_code_qubits_with_fixed_width(width=width, frame = ["bottom","right"], num_data_qubits=qc.num_qubits, pattern = "block25")
         # visualize_qubit_layout(floorplan, show_data_indices=True)
         LS =  qc_to_LS(qc, floorplan)
         polycube = LS_to_polycube(LS, floorplan)
