@@ -125,12 +125,13 @@ impl Simulator {
                     self.scheduler.add_job(self.job_list[job_id].clone());
                 }
                 EventType::StartScheduling => {
+                    let start = Instant::now();
+
                     if self.config.enable_defrag {
                         self.env.defrag();
                     }
-
-                    let start = Instant::now();
                     let issued_programs = self.scheduler.run(&self.env);
+
                     let elapsed_msec = start.elapsed().as_micros();
                     sum_schedule_time += elapsed_msec as u64;
                     schedule_count += 1;

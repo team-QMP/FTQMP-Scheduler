@@ -22,6 +22,7 @@ pub struct Environment {
     suspend_until: BTreeMap<u64, ProgramCounter>,
     /// for defrag
     next_defrag_cands: Vec<ProgramCounter>,
+    last_defrag_point: ProgramCounter,
 }
 
 impl Environment {
@@ -36,6 +37,7 @@ impl Environment {
             program_counter: 0,
             suspend_until: BTreeMap::new(),
             next_defrag_cands: Vec::new(),
+            last_defrag_point: 0,
         }
     }
 
@@ -171,11 +173,16 @@ impl Environment {
     }
 
     pub fn defrag(&mut self) {
+        //self.next_defrag_cands.retain(|z| *z > self.last_defrag_point);
+        self.next_defrag_cands.sort(); // WATN: Must defrag in increasing order of $z$ position
+        self.next_defrag_cands.dedup();
+
         for z in self.next_defrag_cands.clone() {
             // TODO: remove clone
             if z >= self.program_counter {
                 self.defrag_at(z as ProgramCounter);
             }
+            self.last_defrag_point = z;
         }
         self.next_defrag_cands.clear();
     }
