@@ -208,7 +208,7 @@ impl Environment {
         //tracing::debug!("\n  defrag at {},\n  below: {:?}\n  above: {:?}", defrag_point, below, above);
         self.issued_programs.clear();
         self.issued_programs.extend(below);
-        let (cost, above) = drop_programs(above);
+        let (cost, above) = drop_programs(defrag_point, above);
         self.issued_programs.extend(above);
 
         self.running_programs = self
@@ -244,9 +244,9 @@ impl Environment {
     }
 }
 
-/// All program must be represented by a single cuboid.
-/// TODO: Support other representations?
-fn drop_programs(programs: Vec<Program>) -> (ProgramCounter, Vec<Program>) {
+/// Assumption1: All program must be represented by a single cuboid.
+/// Assumption2: `defrag_point` is larger than the current program counter (== z position).
+fn drop_programs(defrag_point: ProgramCounter, programs: Vec<Program>) -> (u64, Vec<Program>) {
     let mut cuboids: Vec<_> = programs
         .into_iter()
         .map(|p| {
@@ -260,6 +260,7 @@ fn drop_programs(programs: Vec<Program>) -> (ProgramCounter, Vec<Program>) {
     let mut cs_drop_x: Vec<Cuboid> = Vec::new();
     let mut y_cost_table = Vec::new();
     for mut c in cuboids {
+        assert!(c.z1() as ProgramCounter >= defrag_point);
         let mut new_y1 = 0;
         for other in &cs_drop_x {
             // collision check
@@ -272,9 +273,14 @@ fn drop_programs(programs: Vec<Program>) -> (ProgramCounter, Vec<Program>) {
         if new_y1 != c.y1() {
             //tracing::debug!("move y : {} -> {}", c.y1(), new_y1);
             c.update_y1(new_y1);
-            for x in c.x1()..c.x2() {
-                y_cost_table.resize(c.x2() as usize, 0);
-                y_cost_table[x as usize] += c.size_y() as u64;
+            // The condition c.z1() != defrag_point means that c has not started the execution yet.
+            // Thus the rellocation of c satisfying c.z1() != defrag_point does not require actual
+            // move operations because it just changes the reserved location in the future.
+            if c.z1() as ProgramCounter == defrag_point {
+                for x in c.x1()..c.x2() {
+                    y_cost_table.resize(c.x2() as usize, 0);
+                    y_cost_table[x as usize] += c.size_y() as u64;
+                }
             }
         }
         cs_drop_x.push(c);
@@ -298,9 +304,14 @@ fn drop_programs(programs: Vec<Program>) -> (ProgramCounter, Vec<Program>) {
         if new_x1 != c.x1() {
             //tracing::debug!("move x : {} -> {}", c.x1(), new_x1);
             c.update_x1(new_x1);
-            for y in c.y1()..c.y2() {
-                x_cost_table.resize(c.y2() as usize, 0);
-                x_cost_table[y as usize] += c.size_x() as u64;
+            // The condition c.z1() != defrag_point means that c has not started the execution yet.
+            // Thus the rellocation of c satisfying c.z1() != defrag_point does not require actual
+            // move operations because it just changes the reserved location in the future.
+            if c.z1() as ProgramCounter == defrag_point {
+                for y in c.y1()..c.y2() {
+                    x_cost_table.resize(c.y2() as usize, 0);
+                    x_cost_table[y as usize] += c.size_x() as u64;
+                }
             }
         }
         result.push(c.clone());
@@ -355,7 +366,7 @@ mod test {
         let p2 = Program::new(ProgramFormat::Cuboid(vec![c2]));
         let p3 = Program::new(ProgramFormat::Cuboid(vec![c3]));
 
-        let (_, ps) = drop_programs(vec![p1, p2, p3]);
+        let (_, ps) = drop_programs(0, vec![p1, p2, p3]);
 
         let c1_moved = Cuboid::new(Coordinate::new(0, 0, 0), 2, 2, 2);
         let c2_moved = Cuboid::new(Coordinate::new(2, 0, 0), 2, 2, 2);
