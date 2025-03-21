@@ -8,4 +8,5 @@ pub mod preprocess;
 pub mod program;
 pub mod scheduler;
 pub mod simulation;
+pub mod test_utils;
 pub mod visualizer;

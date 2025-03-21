@@ -15,7 +15,7 @@ impl GreedyScheduler {
     pub fn new(config: SimulationConfig) -> Self {
         Self {
             job_list: VecDeque::new(),
-            env: Environment::new(config.size_x as i32, config.size_y as i32),
+            env: Environment::new(config.clone()),
             config,
         }
     }
