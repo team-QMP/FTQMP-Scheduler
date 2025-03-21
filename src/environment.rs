@@ -174,6 +174,8 @@ impl Environment {
     }
 
     pub fn defrag(&mut self) {
+        self.next_defrag_cands
+            .retain(|z| *z >= self.program_counter);
         let defrag_until = self.program_counter + self.config.defrag_range.unwrap();
         while self
             .next_defrag_cands
