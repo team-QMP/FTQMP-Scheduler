@@ -87,6 +87,7 @@ impl Scheduler for FastGreedyScheduler {
 
         let already_used: HashSet<_> = env.running_programs().iter().map(|p| p.pos()).collect();
 
+        // TODO: incremental management of location candidates
         let mut location_candidates: Vec<_> = env
             .running_programs()
             .iter()
@@ -123,6 +124,7 @@ impl Scheduler for FastGreedyScheduler {
         let mut res = Vec::new();
         let mut scheduled_programs = Vec::new(); // programs to be issued in this scheduling
         let jobs = self.take_jobs_by_batch_size();
+        let cmp_schedule = |s1: &Schedule, s2: &Schedule| (s1.z, s1.x + s1.y) < (s2.z, s2.x + s2.y);
         for job in jobs {
             let mut best_it = None;
             let mut best: Option<Schedule> = None;
@@ -135,7 +137,7 @@ impl Scheduler for FastGreedyScheduler {
                         .any(|p| is_overlap(&scheduled_program, p));
                     if !is_overlap
                         && env.can_issue(&scheduled_program)
-                        && (best.is_none() || best.clone().unwrap().z > schedule.z)
+                        && (best.is_none() || cmp_schedule(&schedule, best.as_ref().unwrap()))
                     {
                         best = Some(schedule);
                         best_it = Some(i);
