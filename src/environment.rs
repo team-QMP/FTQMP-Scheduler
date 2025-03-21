@@ -1,16 +1,16 @@
-use crate::program::{
-    cut_program_at_z, is_overlap, Cuboid, Program, ProgramCounter, ProgramFormat,
+use crate::{
+    config::SimulationConfig,
+    program::{cut_program_at_z, is_overlap, Cuboid, Program, ProgramCounter, ProgramFormat},
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
+    config: SimulationConfig,
     /// All programs assigned by a scheduler
     issued_programs: Vec<Program>,
     /// All running programs
     running_programs: Vec<Program>,
-    size_x: i32,
-    size_y: i32,
     /// The maximum z position of issued programs + 1.
     end_pc: u64,
     /// The global time in cycles. This is not equal to the program counter because the program counter may
@@ -21,36 +21,38 @@ pub struct Environment {
     program_counter: u64,
     suspend_until: BTreeMap<u64, ProgramCounter>,
     /// for defrag
-    next_defrag_cands: Vec<ProgramCounter>,
+    next_defrag_cands: BTreeSet<ProgramCounter>,
+    last_defrag_point: u64,
+    defrag_cost_sum: u64,
 }
 
 impl Environment {
-    pub fn new(size_x: i32, size_y: i32) -> Self {
+    pub fn new(config: SimulationConfig) -> Self {
         Self {
+            config,
             issued_programs: Vec::new(),
             running_programs: Vec::new(),
-            size_x,
-            size_y,
             end_pc: 0,
             current_time: 0,
             program_counter: 0,
             suspend_until: BTreeMap::new(),
-            next_defrag_cands: Vec::new(),
+            next_defrag_cands: BTreeSet::new(),
+            last_defrag_point: 0,
+            defrag_cost_sum: 0,
         }
     }
 
     fn is_in_range(&self, p: &Program) -> bool {
+        let size_x = self.config.size_x as i32;
+        let size_y = self.config.size_y as i32;
         match p.format() {
-            ProgramFormat::Polycube(polycube) => polycube.blocks().iter().all(|b| {
-                0 <= b.x && b.x < self.size_x && 0 <= b.y && b.y < self.size_y && 0 <= b.z
-            }),
+            ProgramFormat::Polycube(polycube) => polycube
+                .blocks()
+                .iter()
+                .all(|b| 0 <= b.x && b.x < size_x && 0 <= b.y && b.y < size_y && 0 <= b.z),
             ProgramFormat::Cuboid(cs) => cs.iter().all(|c| {
                 let pos = c.pos();
-                0 <= c.x1()
-                    && c.x2() <= self.size_x
-                    && 0 <= c.y1()
-                    && c.y2() <= self.size_y
-                    && 0 <= pos.z
+                0 <= c.x1() && c.x2() <= size_x && 0 <= c.y1() && c.y2() <= size_y && 0 <= pos.z
             }),
         }
     }
@@ -78,7 +80,9 @@ impl Environment {
                     }
                 }
             }
-            self.next_defrag_cands.push(p.z2() as ProgramCounter);
+            if p.z2() as u64 >= self.last_defrag_point {
+                self.next_defrag_cands.insert(p.z2() as ProgramCounter);
+            }
         }
         can_issue
     }
@@ -120,9 +124,8 @@ impl Environment {
             result += wait_cycles;
             tmp_current_time += wait_cycles;
         }
-        result += self.end_pc() - tmp_program_counter;
 
-        result
+        result + self.end_pc() - tmp_program_counter + self.defrag_cost_sum
     }
 
     /// Returns the global program counter
@@ -171,13 +174,17 @@ impl Environment {
     }
 
     pub fn defrag(&mut self) {
-        for z in self.next_defrag_cands.clone() {
-            // TODO: remove clone
-            if z >= self.program_counter {
+        let defrag_until = self.program_counter + self.config.defrag_range.unwrap();
+        while self
+            .next_defrag_cands
+            .first()
+            .map_or(false, |z| *z < defrag_until)
+        {
+            let z = self.next_defrag_cands.pop_first().unwrap();
+            if self.last_defrag_point + self.config.defrag_interval.unwrap() < z {
                 self.defrag_at(z as ProgramCounter);
             }
         }
-        self.next_defrag_cands.clear();
     }
 
     // Perform defragmentation in the given program counter
@@ -201,7 +208,8 @@ impl Environment {
         //tracing::debug!("\n  defrag at {},\n  below: {:?}\n  above: {:?}", defrag_point, below, above);
         self.issued_programs.clear();
         self.issued_programs.extend(below);
-        self.issued_programs.extend(drop_programs(above));
+        let (cost, above) = drop_programs(above);
+        self.issued_programs.extend(above);
 
         self.running_programs = self
             .issued_programs
@@ -215,8 +223,9 @@ impl Environment {
             })
             .collect();
 
-        let cost_of_defrag = (self.size_x + self.size_y) as ProgramCounter; // worst scenario
-        self.suspend_at(defrag_point, self.current_time + cost_of_defrag);
+        self.last_defrag_point = self.last_defrag_point.max(defrag_point);
+        self.defrag_cost_sum += cost; // TODO
+        tracing::debug!("Defragmentation at {} with cost {}", defrag_point, cost);
     }
 
     pub fn validate(&self) {
@@ -237,7 +246,7 @@ impl Environment {
 
 /// All program must be represented by a single cuboid.
 /// TODO: Support other representations?
-fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
+fn drop_programs(programs: Vec<Program>) -> (ProgramCounter, Vec<Program>) {
     let mut cuboids: Vec<_> = programs
         .into_iter()
         .map(|p| {
@@ -248,8 +257,8 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
 
     // drop by y position
     cuboids.sort_by_key(|c| c.y1());
-    //tracing::debug!(" cuboids: {:?}", cuboids);
     let mut cs_drop_x: Vec<Cuboid> = Vec::new();
+    let mut y_cost_table = Vec::new();
     for mut c in cuboids {
         let mut new_y1 = 0;
         for other in &cs_drop_x {
@@ -260,16 +269,22 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
                 new_y1 = new_y1.max(other.y2());
             }
         }
-        //if new_y1 != c.y1() {
-        //    tracing::debug!("move y : {} -> {}", c.y1(), new_y1);
-        //}
-        c.update_y1(new_y1);
+        if new_y1 != c.y1() {
+            //tracing::debug!("move y : {} -> {}", c.y1(), new_y1);
+            c.update_y1(new_y1);
+            for x in c.x1()..c.x2() {
+                y_cost_table.resize(c.x2() as usize, 0);
+                y_cost_table[x as usize] += c.size_y() as u64;
+            }
+        }
         cs_drop_x.push(c);
     }
+    let y_cost = y_cost_table.into_iter().max().unwrap_or(0);
 
     // drop by x position
     cs_drop_x.sort_by_key(|c| c.x1());
     let mut result: Vec<Cuboid> = Vec::new();
+    let mut x_cost_table = Vec::new();
     for mut c in cs_drop_x {
         let mut new_x1 = 0;
         for other in &result {
@@ -280,29 +295,38 @@ fn drop_programs(programs: Vec<Program>) -> Vec<Program> {
                 new_x1 = new_x1.max(other.x2());
             }
         }
-        //if new_x1 != c.x1() {
-        //    tracing::debug!("move x : {} -> {}", c.x1(), new_x1);
-        //}
-        c.update_x1(new_x1);
+        if new_x1 != c.x1() {
+            //tracing::debug!("move x : {} -> {}", c.x1(), new_x1);
+            c.update_x1(new_x1);
+            for y in c.y1()..c.y2() {
+                x_cost_table.resize(c.y2() as usize, 0);
+                x_cost_table[y as usize] += c.size_x() as u64;
+            }
+        }
         result.push(c.clone());
     }
+    let x_cost = x_cost_table.into_iter().max().unwrap_or(0);
 
-    result
+    let result = result
         .into_iter()
         .map(|c| Program::new(ProgramFormat::Cuboid(vec![c])))
-        .collect()
+        .collect();
+    (x_cost + y_cost, result)
 }
 
 #[cfg(test)]
 mod test {
+    use crate::config::SimulationConfig;
     use crate::environment::Environment;
     use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
+    use crate::test_utils;
 
     use super::drop_programs;
 
     #[test]
     fn test_environment_add_polycube() {
-        let mut env = Environment::new(100, 100);
+        let config = SimulationConfig::from_toml(test_utils::TEST_TOML_FILE.into()).unwrap();
+        let mut env = Environment::new(config);
 
         let p1 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
             Coordinate::new(0, 0, 0),
@@ -331,7 +355,7 @@ mod test {
         let p2 = Program::new(ProgramFormat::Cuboid(vec![c2]));
         let p3 = Program::new(ProgramFormat::Cuboid(vec![c3]));
 
-        let ps = drop_programs(vec![p1, p2, p3]);
+        let (_, ps) = drop_programs(vec![p1, p2, p3]);
 
         let c1_moved = Cuboid::new(Coordinate::new(0, 0, 0), 2, 2, 2);
         let c2_moved = Cuboid::new(Coordinate::new(2, 0, 0), 2, 2, 2);

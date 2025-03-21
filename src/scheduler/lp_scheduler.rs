@@ -511,7 +511,7 @@ impl Scheduler for LPScheduler {
             size_x: self.config.size_x,
             size_y: self.config.size_y,
             size_z: worst_zsum + env.end_pc().max(scheduled_point as u64) as u32,
-            min_z: scheduled_point as i32,
+            min_z: scheduled_point,
         };
 
         let jobs = self.take_jobs_by_batch_size();

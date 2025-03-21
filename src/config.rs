@@ -15,6 +15,7 @@ pub struct SimulationConfig {
     pub no_output_program: bool,
     pub enable_defrag: bool,
     pub defrag_interval: Option<u64>,
+    pub defrag_range: Option<u64>,
     pub preprocessor: PreprocessorConfig,
     pub scheduler: SchedulerConfig,
 }
@@ -44,11 +45,12 @@ impl SimulationConfig {
 pub mod test {
     use crate::config::SimulationConfig;
     use crate::scheduler::SchedulerKind;
+    use crate::test_utils;
     use std::path::PathBuf;
 
     #[test]
     fn test_read_from_file() {
-        let path = PathBuf::from("examples/test.toml"); // TODO
+        let path = PathBuf::from(test_utils::TEST_TOML_FILE);
         let config = SimulationConfig::from_toml(path).unwrap();
         assert!(config.size_x == 6);
         assert!(config.size_y == 6);
