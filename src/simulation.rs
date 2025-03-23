@@ -31,7 +31,9 @@ pub struct SimulationResult {
     pub z_sum: u64,
     pub max_z: u64,
     /// the average response time of a scheduler (in micro sec)
-    avg_response_time: u64,
+    pub avg_response_time: u64,
+    /// the summation of defragmentation_cost in code cycles
+    pub defrag_cost_sum: Option<u64>,
 }
 
 pub struct Simulator {
@@ -245,6 +247,11 @@ impl Simulator {
             z_sum,
             max_z: self.env.end_pc(),
             avg_response_time: sum_schedule_time / schedule_count,
+            defrag_cost_sum: if self.config.enable_defrag {
+                Some(self.env.defrag_cost_sum())
+            } else {
+                None
+            },
         })
     }
 
