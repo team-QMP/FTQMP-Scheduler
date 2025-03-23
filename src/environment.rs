@@ -230,6 +230,10 @@ impl Environment {
         tracing::debug!("Defragmentation at {} with cost {}", defrag_point, cost);
     }
 
+    pub fn defrag_cost_sum(&self) -> u64 {
+        self.defrag_cost_sum
+    }
+
     pub fn validate(&self) {
         for i in 0..self.issued_programs.len() {
             assert!(self.is_in_range(&self.issued_programs[i]));
