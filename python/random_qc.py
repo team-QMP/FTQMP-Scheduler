@@ -428,7 +428,7 @@ def random_circuit_to_json(unit_time = 50, num_qc = 10, json_file_name = "random
         random_T_ratio = random.uniform(0, 1)
         qc = random_circuit_variable_T_ratio(num_qubits=random_num_qubits, depth=random_layers, seed=None, T_gate_ratio=random_T_ratio)
         qc.draw(output = 'mpl')    
-        
+        t
         # floorplan =  place_surface_code_qubits_without_size_const(num_data_qubits = qc.num_qubits,  frame = ["bottom","right"], pattern = "block25")
         width = math.floor(np.sqrt(qc.num_qubits)) * 4 + 1
         height = math.floor(np.sqrt(qc.num_qubits)) * 4 + 1
@@ -447,6 +447,27 @@ def random_circuit_to_json(unit_time = 50, num_qc = 10, json_file_name = "random
     f.close()
     print("saved as:", json_file_name)
     return True
+
+def gen_random_polycube_with_block25(num_qubits_x, num_qubits_y, num_layer):
+    width = 2 * num_qubits_x + 1
+    height = 2 * num_qubits_y + 1
+    num_qubits = num_qubits_x * num_qubits_y
+    t_gate_ratio = random.uniform(0, 1)
+    qc = random_circuit_variable_T_ratio(num_qubits=num_qubits, depth=num_layer, seed=None, T_gate_ratio=t_gate_ratio)
+    floorplan = place_surface_code_qubits_with_fixed_width(width=width, frame=["bottom", "right"], num_data_qubits=qc.num_qubits, pattern="block25")
+    #visualize_qubit_layout(floorplan, show_data_indices=True)
+    LS = qc_to_LS(qc, floorplan)
+    return LS_to_polycube(LS, floorplan)
+
+def gen_random_ls_polycubes(qwidth_range, qheight_range, layer_range, num_programs):
+    polycubes = []
+    for _ in range(num_programs):
+        w = random.randint(qwidth_range[0], qwidth_range[1])
+        h = random.randint(qheight_range[0], qheight_range[1])
+        l = random.randint(layer_range[0], layer_range[1])
+        polycubes.append(gen_random_polycube_with_block25(w, h, l))
+
+    return polycubes
 
 def random_circuit_to_json_with_fixed_width(width, unit_time = 50, num_qc = 100, num_qubits = [5,100], layers = [10,200],json_file_name = "random_program_with_fixed_witdth.json"):
     """
@@ -486,6 +507,7 @@ def random_circuit_to_json_with_fixed_width(width, unit_time = 50, num_qc = 100,
     f.close()
     print("saved as:", json_file_name)
     return True
+
 
 
 ### Example with variable T ratio
