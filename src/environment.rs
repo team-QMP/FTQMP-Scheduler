@@ -1,6 +1,8 @@
 use crate::{
     config::SimulationConfig,
-    program::{cut_program_at_z, is_overlap, Cuboid, Program, ProgramCounter, ProgramFormat},
+    program::{
+        cut_program_at_z, is_overlap, Coordinate, Cuboid, Program, ProgramCounter, ProgramFormat,
+    },
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -24,6 +26,7 @@ pub struct Environment {
     next_defrag_cands: BTreeSet<ProgramCounter>,
     last_defrag_point: u64,
     defrag_cost_sum: u64,
+    defrag_move_areas: Vec<Cuboid>,
 }
 
 impl Environment {
@@ -39,6 +42,7 @@ impl Environment {
             next_defrag_cands: BTreeSet::new(),
             last_defrag_point: 0,
             defrag_cost_sum: 0,
+            defrag_move_areas: Vec::new(),
         }
     }
 
@@ -210,8 +214,9 @@ impl Environment {
         //tracing::debug!("\n  defrag at {},\n  below: {:?}\n  above: {:?}", defrag_point, below, above);
         self.issued_programs.clear();
         self.issued_programs.extend(below);
-        let (cost, above) = drop_programs(defrag_point, above);
+        let (cost, move_areas, above) = drop_programs(defrag_point, above);
         self.issued_programs.extend(above);
+        self.defrag_move_areas.extend(move_areas);
 
         self.running_programs = self
             .issued_programs
@@ -226,8 +231,12 @@ impl Environment {
             .collect();
 
         self.last_defrag_point = self.last_defrag_point.max(defrag_point);
-        self.defrag_cost_sum += cost; // TODO
+        self.defrag_cost_sum += cost;
         tracing::debug!("Defragmentation at {} with cost {}", defrag_point, cost);
+    }
+
+    pub fn defrag_move_areas(&self) -> &Vec<Cuboid> {
+        &self.defrag_move_areas
     }
 
     pub fn defrag_cost_sum(&self) -> u64 {
@@ -252,7 +261,10 @@ impl Environment {
 
 /// Assumption1: All program must be represented by a single cuboid.
 /// Assumption2: `defrag_point` is larger than the current program counter (== z position).
-fn drop_programs(defrag_point: ProgramCounter, programs: Vec<Program>) -> (u64, Vec<Program>) {
+fn drop_programs(
+    defrag_point: ProgramCounter,
+    programs: Vec<Program>,
+) -> (u64, Vec<Cuboid>, Vec<Program>) {
     let mut cuboids: Vec<_> = programs
         .into_iter()
         .map(|p| {
@@ -260,6 +272,8 @@ fn drop_programs(defrag_point: ProgramCounter, programs: Vec<Program>) -> (u64, 
             p.cuboid().unwrap()[0].clone()
         })
         .collect();
+
+    let mut move_areas = Vec::new();
 
     // drop by y position
     cuboids.sort_by_key(|c| c.y1());
@@ -278,11 +292,20 @@ fn drop_programs(defrag_point: ProgramCounter, programs: Vec<Program>) -> (u64, 
         }
         if new_y1 != c.y1() {
             //tracing::debug!("move y : {} -> {}", c.y1(), new_y1);
+            assert!(new_y1 < c.y1());
+
             c.update_y1(new_y1);
             // The condition c.z1() != defrag_point means that c has not started the execution yet.
             // Thus the rellocation of c satisfying c.z1() != defrag_point does not require actual
             // move operations because it just changes the reserved location in the future.
             if c.z1() as ProgramCounter == defrag_point {
+                let y_move_len = (c.y1() - new_y1) as usize;
+                move_areas.push(Cuboid::new(
+                    Coordinate::new(c.x1(), new_y1, c.z1()),
+                    c.size_x(),
+                    c.size_y() + y_move_len,
+                    0,
+                ));
                 for x in c.x1()..c.x2() {
                     y_cost_table.resize(c.x2() as usize, 0);
                     y_cost_table[x as usize] += c.size_y() as u64;
@@ -309,11 +332,20 @@ fn drop_programs(defrag_point: ProgramCounter, programs: Vec<Program>) -> (u64, 
         }
         if new_x1 != c.x1() {
             //tracing::debug!("move x : {} -> {}", c.x1(), new_x1);
+            assert!(new_x1 < c.x1());
+
             c.update_x1(new_x1);
             // The condition c.z1() != defrag_point means that c has not started the execution yet.
             // Thus the rellocation of c satisfying c.z1() != defrag_point does not require actual
             // move operations because it just changes the reserved location in the future.
             if c.z1() as ProgramCounter == defrag_point {
+                let x_move_len = (c.x1() - new_x1) as usize;
+                move_areas.push(Cuboid::new(
+                    Coordinate::new(new_x1, c.y1(), c.z1()),
+                    c.size_x() + x_move_len,
+                    c.size_y(),
+                    0,
+                ));
                 for y in c.y1()..c.y2() {
                     x_cost_table.resize(c.y2() as usize, 0);
                     x_cost_table[y as usize] += c.size_x() as u64;
@@ -328,7 +360,7 @@ fn drop_programs(defrag_point: ProgramCounter, programs: Vec<Program>) -> (u64, 
         .into_iter()
         .map(|c| Program::new(ProgramFormat::Cuboid(vec![c])))
         .collect();
-    (x_cost + y_cost, result)
+    (x_cost + y_cost, move_areas, result)
 }
 
 #[cfg(test)]
@@ -372,7 +404,7 @@ mod test {
         let p2 = Program::new(ProgramFormat::Cuboid(vec![c2]));
         let p3 = Program::new(ProgramFormat::Cuboid(vec![c3]));
 
-        let (_, ps) = drop_programs(0, vec![p1, p2, p3]);
+        let (_, _, ps) = drop_programs(0, vec![p1, p2, p3]);
 
         let c1_moved = Cuboid::new(Coordinate::new(0, 0, 0), 2, 2, 2);
         let c2_moved = Cuboid::new(Coordinate::new(2, 0, 0), 2, 2, 2);

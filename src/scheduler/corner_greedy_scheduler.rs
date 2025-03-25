@@ -7,14 +7,14 @@ use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 use std::collections::{HashSet, VecDeque};
 use std::time::Instant;
 
-pub struct FastGreedyScheduler {
+pub struct CornerGreedyScheduler {
     job_list: VecDeque<Job>,
     config: SimulationConfig,
     schedule_cycles_sum: u64,
     schedule_count: u64,
 }
 
-impl FastGreedyScheduler {
+impl CornerGreedyScheduler {
     pub fn new(config: SimulationConfig) -> Self {
         Self {
             job_list: VecDeque::new(),
@@ -69,7 +69,7 @@ fn create_location_candidate(p: &Program) -> Vec<Coordinate> {
     ]
 }
 
-impl Scheduler for FastGreedyScheduler {
+impl Scheduler for CornerGreedyScheduler {
     fn add_job(&mut self, job: Job) {
         self.job_list.push_back(job);
     }
@@ -115,10 +115,14 @@ impl Scheduler for FastGreedyScheduler {
         if location_candidates.is_empty() {
             location_candidates.push(Coordinate::new(0, 0, scheduled_point as i32));
         }
+
+        let defrag_move_areas = env.defrag_move_areas();
+
         tracing::debug!(
-            "PC = {},  #(location candidates) = {}",
+            "PC = {},  #(location candidates) = {},  #(defrag_move_areas) = {}",
             env.global_pc(),
-            location_candidates.len()
+            location_candidates.len(),
+            defrag_move_areas.len()
         );
 
         let mut res = Vec::new();
@@ -135,7 +139,16 @@ impl Scheduler for FastGreedyScheduler {
                     let is_overlap = scheduled_programs
                         .iter()
                         .any(|p| is_overlap(&scheduled_program, p));
+                    let is_overlap_with_moves = defrag_move_areas.iter().any(|c1| {
+                        assert!(c1.z1() == c1.z2()); // because c1 is dummy cuboid
+                        let c2 = &scheduled_program.cuboid().unwrap()[0];
+                        let is_overlap_x = !(c1.x2() <= c2.x1() || c2.x2() <= c1.x1());
+                        let is_overlap_y = !(c1.y2() <= c2.y1() || c2.y2() <= c1.y1());
+                        let is_overlap_z = c2.z1() < c1.z1() && c1.z1() < c2.z2();
+                        is_overlap_x && is_overlap_y && is_overlap_z
+                    });
                     if !is_overlap
+                        && !is_overlap_with_moves
                         && env.can_issue(&scheduled_program)
                         && (best.is_none() || cmp_schedule(&schedule, best.as_ref().unwrap()))
                     {
