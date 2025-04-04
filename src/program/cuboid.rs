@@ -14,7 +14,7 @@ pub struct Cuboid {
 impl From<&Polycube> for Cuboid {
     fn from(item: &Polycube) -> Self {
         Self {
-            pos: Coordinate::new(item.min_x(), item.min_y(), item.min_z()),
+            pos: Coordinate::new(0, 0, 0),
             size_x: (item.max_x() - item.min_x() + 1) as usize,
             size_y: (item.max_y() - item.min_y() + 1) as usize,
             size_z: (item.max_z() - item.min_z() + 1) as usize,
@@ -96,7 +96,7 @@ mod test {
     fn test_create_cuboid_from_polycube() {
         let p = Polycube::new(vec![Coordinate::new(1, 2, 3), Coordinate::new(2, 0, 1)]);
         let cuboid = Cuboid::from(&p);
-        assert_eq!(cuboid.pos, Coordinate::new(1, 0, 1));
+        assert_eq!(cuboid.pos, Coordinate::new(0, 0, 0));
         assert_eq!(cuboid.size_x, 2);
         assert_eq!(cuboid.size_y, 3);
         assert_eq!(cuboid.size_z, 3);
