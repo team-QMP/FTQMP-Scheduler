@@ -3,6 +3,7 @@ from compile_qc_to_ls import *
 from random_qc import *
 from qiskit.circuit import QuantumCircuit
 import numpy as np
+import os
 
 
 def gen_polycube_dataset():
@@ -65,8 +66,10 @@ def get_param(kind):
 
     assert(False)
 
-def gen_cuboid_dataset(dinfos, req_interval, json_name_prefix, num):
+def gen_cuboid_dataset(dinfos, req_interval, out_dir, num):
     rng = np.random.default_rng()
+
+    os.mkdir(out_dir)
 
     for i in range(num):
         job_data = {"programs": []}
@@ -100,13 +103,15 @@ def gen_cuboid_dataset(dinfos, req_interval, json_name_prefix, num):
             requests.append([req_time, ref_id])
 
         job_data["job_requests"] = requests
-        json_filename = (json_name_prefix + "-{}.json").format(i + 1)
-        f = open(json_filename, "w")
+
+        json_path = (out_dir + "/requests-{}.json").format(i + 1)
+        f = open(json_path, "w")
         json.dump(job_data, f, ensure_ascii=False, indent = 4)
         f.close()
-        print("saved as:", json_filename)
+        print("saved as:", json_path)
 
 
-gen_cuboid_dataset(dinfos=[[4, 333], [5, 333], [6, 334]], req_interval=2000, json_name_prefix="A", num=100)
+#gen_cuboid_dataset(dinfos=[[4, 333], [5, 333], [6, 334]], req_interval=2000, json_name_prefix="A", num=100)
+gen_cuboid_dataset(dinfos=[[4, 333], [5, 333], [6, 334]], req_interval=2000, out_dir="test", num=20)
 
 
