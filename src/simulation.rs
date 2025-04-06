@@ -30,6 +30,7 @@ pub struct SimulationResult {
     /// The summation of $z$ length of programs
     pub z_sum: u64,
     pub max_z: u64,
+    pub response_time: Vec<u64>,
     /// the average response time of a scheduler (in micro sec)
     pub avg_response_time: u64,
     /// the summation of defragmentation_cost in code cycles
@@ -97,9 +98,7 @@ impl Simulator {
         let mut result = Vec::new();
 
         let mut z_sum = 0;
-        let mut prev_defrag_point = 0;
-        let mut sum_schedule_time = 0;
-        let mut schedule_count = 0;
+        let mut response_time = Vec::new();
 
         while let Some(event) = self.event_que.pop() {
             // If all jobs have been scheduled, we ignore the remaining event because they does not
@@ -134,11 +133,9 @@ impl Simulator {
                     }
                     let issued_programs = self.scheduler.run(&self.env);
 
-                    let elapsed_msec = start.elapsed().as_micros();
-                    sum_schedule_time += elapsed_msec as u64;
-                    schedule_count += 1;
-                    let elapsed_cycles =
-                        elapsed_msec.div_ceil(self.config.micro_sec_per_cycle.into()) as u64;
+                    let elapsed_msec = start.elapsed().as_micros() as u64;
+                    response_time.push(elapsed_msec);
+                    let elapsed_cycles = elapsed_msec.div_ceil(self.config.micro_sec_per_cycle);
                     let has_scheduled = !issued_programs.is_empty();
 
                     // If the current job que is empty, then the scheduler waits until the next
@@ -213,16 +210,8 @@ impl Simulator {
                             .add_event(Event::start_scheduling(next_scheduling_time));
                     }
                 }
-                EventType::Defragmentation => {
-                    let defrag_interval = self.config.defrag_interval.unwrap();
-                    if prev_defrag_point + defrag_interval <= self.env.global_pc() {
-                        self.env.defrag();
-                        prev_defrag_point = self.env.global_pc();
-                    }
-                    self.event_que.add_event(Event::defragmentation(
-                        self.simulation_time + self.config.defrag_interval.unwrap(),
-                    ))
-                }
+                // inplemented in environment
+                EventType::Defragmentation => unimplemented!(),
             }
         }
 
@@ -240,13 +229,16 @@ impl Simulator {
 
         tracing::debug!("final PC = {}", self.env.end_pc());
 
+        let avg_response_time = response_time.iter().sum::<u64>() / (response_time.len() as u64);
+
         Ok(SimulationResult {
             event_log: self.event_log,
             jobs: result,
             total_cycle: self.simulation_time,
             z_sum,
             max_z: self.env.end_pc(),
-            avg_response_time: sum_schedule_time / schedule_count,
+            response_time,
+            avg_response_time,
             defrag_cost_sum: if self.config.enable_defrag {
                 Some(self.env.defrag_cost_sum())
             } else {
