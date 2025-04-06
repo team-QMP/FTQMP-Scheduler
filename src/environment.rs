@@ -150,6 +150,7 @@ impl Environment {
         // TODO: refactoring?
         while let Some((suspend_point, until)) = self.suspend_until.pop_first() {
             if self.program_counter + advance_cycles > suspend_point {
+                assert!(suspend_point >= self.program_counter);
                 // proceed to the suspend point
                 let tmp_advance_cycles = suspend_point - self.program_counter;
                 self.current_time += tmp_advance_cycles;
@@ -179,16 +180,18 @@ impl Environment {
 
     pub fn defrag(&mut self) {
         self.next_defrag_cands
-            .retain(|z| *z >= self.program_counter);
-        let defrag_until = self.program_counter + self.config.defrag_range.unwrap();
-        while self
-            .next_defrag_cands
-            .first()
-            .map_or(false, |z| *z < defrag_until)
-        {
-            let z = self.next_defrag_cands.pop_first().unwrap();
-            if self.last_defrag_point + self.config.defrag_interval.unwrap() < z {
-                self.defrag_at(z as ProgramCounter);
+            .retain(|z| *z >= self.program_counter && *z > self.last_defrag_point);
+
+        let defrag_size = u32::max(2, self.config.scheduler.batch_size.map_or(2, |v| v * 4));
+        let interval = self
+            .config
+            .defrag_interval
+            .expect("defrag_interval is unset");
+        while self.next_defrag_cands.len() > defrag_size as usize {
+            let next = self.next_defrag_cands.pop_first().unwrap();
+            let next2 = self.next_defrag_cands.first().unwrap();
+            if next2 - next >= interval {
+                self.defrag_at(next as ProgramCounter);
             }
         }
     }
@@ -230,7 +233,8 @@ impl Environment {
             })
             .collect();
 
-        self.last_defrag_point = self.last_defrag_point.max(defrag_point);
+        assert!(self.last_defrag_point <= defrag_point);
+        self.last_defrag_point = defrag_point;
         self.defrag_cost_sum += cost;
         tracing::debug!("Defragmentation at {} with cost {}", defrag_point, cost);
     }

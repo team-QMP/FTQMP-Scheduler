@@ -133,7 +133,7 @@ impl Scheduler for CornerGreedyScheduler {
             let mut best_it = None;
             let mut best: Option<Schedule> = None;
             for (i, candidate) in location_candidates.iter().enumerate() {
-                for rot in 0..4 {
+                for rot in 0..2 {
                     let schedule = Schedule::new(candidate.x, candidate.y, candidate.z, rot, false);
                     let scheduled_program = apply_schedule(&job.program, &schedule);
                     let is_overlap = scheduled_programs

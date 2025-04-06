@@ -15,7 +15,6 @@ pub struct SimulationConfig {
     pub no_output_program: bool,
     pub enable_defrag: bool,
     pub defrag_interval: Option<u64>,
-    pub defrag_range: Option<u64>,
     pub preprocessor: PreprocessorConfig,
     pub scheduler: SchedulerConfig,
 }
