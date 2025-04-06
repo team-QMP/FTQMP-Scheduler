@@ -59,53 +59,54 @@ def get_param(kind):
     elif kind == 4:
         return { "w": [5, 9], "h": [5, 9], "t": [4000, 8000] }
     elif kind == 5:
-        return { "w": [5, 13], "h": [5, 13], "t": [12000, 20000] }
+        return { "w": [5, 11], "h": [5, 11], "t": [12000, 20000] }
     elif kind == 6:
-        return { "w": [5, 17], "h": [5, 17], "t": [30000, 40000] }
+        return { "w": [5, 13], "h": [5, 13], "t": [30000, 40000] }
 
     assert(False)
 
-def gen_single_cuboid_dataset(dinfos, req_interval, json_name):
+def gen_cuboid_dataset(dinfos, req_interval, json_name_prefix, num):
     rng = np.random.default_rng()
 
-    job_data = {"programs": []}
+    for i in range(num):
+        job_data = {"programs": []}
 
-    num_requests = 0
-    for dinfo in dinfos:
-        [dtype, num] = dinfo
-        num_requests += num
-        params = get_param(dtype)
+        num_requests = 0
+        for dinfo in dinfos:
+            [dtype, num] = dinfo
+            num_requests += num
+            params = get_param(dtype)
 
-        for _ in range(num):
-            [w1, w2] = params["w"]
-            [h1, h2] = params["h"]
-            [t1, t2] = params["t"]
+            for _ in range(num):
+                [w1, w2] = params["w"]
+                [h1, h2] = params["h"]
+                [t1, t2] = params["t"]
 
-            w = int(rng.integers(w1, w2))
-            #h = int(rng.integers(h1, h2))
-            h = w
-            t = int(rng.integers(t1, t2))
-            if w > h:
-                w, h = h, w
+                w = int(rng.integers(w1, w2))
+                h = int(rng.integers(h1, h2))
+                t = int(rng.integers(t1, t2))
+                if w > h:
+                    w, h = h, w
 
-            job_data["programs"].append({"Cuboid": [{"pos": [0,0,0], "size_x": w, "size_y": h, "size_z": t}]})
+                job_data["programs"].append({"Cuboid": [{"pos": [0,0,0], "size_x": w, "size_y": h, "size_z": t}]})
 
-    request_arr = np.arange(num_requests, dtype=int)
-    np.random.shuffle(request_arr)
-    request_arr = request_arr.tolist()
-    requests = []
-    for job_id in range(num_requests):
-        req_time = req_interval * job_id
-        ref_id = request_arr[job_id]
-        requests.append([req_time, ref_id])
+        request_arr = np.arange(num_requests, dtype=int)
+        np.random.shuffle(request_arr)
+        request_arr = request_arr.tolist()
+        requests = []
+        for job_id in range(num_requests):
+            req_time = req_interval * job_id
+            ref_id = request_arr[job_id]
+            requests.append([req_time, ref_id])
 
-    job_data["job_requests"] = requests
-    f = open(json_name, "w")
-    json.dump(job_data, f, ensure_ascii=False, indent = 4)
-    f.close()
-    print("saved as:", json_name)
+        job_data["job_requests"] = requests
+        json_filename = (json_name_prefix + "-{}.json").format(i + 1)
+        f = open(json_filename, "w")
+        json.dump(job_data, f, ensure_ascii=False, indent = 4)
+        f.close()
+        print("saved as:", json_filename)
 
 
-gen_single_cuboid_dataset(dinfos=[[4, 333], [5, 333], [6, 334]], req_interval=2000, json_name="A.json")
+gen_cuboid_dataset(dinfos=[[4, 333], [5, 333], [6, 334]], req_interval=2000, json_name_prefix="A", num=100)
 
 

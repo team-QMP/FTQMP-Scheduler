@@ -52,10 +52,10 @@ batch_size = ${batch_size}"
         dataset_file=$(basename "$dataset_file")
 
         local output_file="${exp_name}/result-${dataset_file}"
-        RUST_LOG=DEBUG ../target/release/qmp_scheduler --config-path ${exp_name}/${toml_filename} -o ${output_file} -d ${dataset_dir}/${dataset_file}
+        ../target/release/qmp_scheduler --config-path ${exp_name}/${toml_filename} -o ${output_file} -d ${dataset_dir}/${dataset_file}
     done
 
-    python3 calc-avgtime.py ${exp_name}
+    python3 analyze_result.py ${exp_name}
 }
 
 
@@ -74,6 +74,6 @@ cd qce25_exp
 # throughput test
 # =========================================================
 
-run_single_exp 100 21 21 5 "cornergreedy" false 10000 "convert-to-cuboid" 120 "dataset/A" "test-CG-D=0"
-run_single_exp 100 21 21 5 "cornergreedy" true 10000 "convert-to-cuboid" 120 "dataset/A" "test-CG-D=1"
+run_single_exp 100 21 21 5 "cornergreedy" false 10000 "convert-to-cuboid" 120 "dataset/A" "A-CG-D=0"
+run_single_exp 100 21 21 5 "cornergreedy" true 10000 "convert-to-cuboid" 120 "dataset/A" "A-CG-D=1"
 
