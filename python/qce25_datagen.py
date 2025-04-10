@@ -41,28 +41,19 @@ def gen_polycube_dataset():
     f.close()
     print("saved as:", json_file_name)
 
-    # for responsiveness test
-    #job_data["job_requests"] = requests_t0
-    #json_file_name = "3-10x3-10_N={}_t=0_random.json".format(num_request)
-    #f = open(json_file_name, "w")
-    #json.dump(job_data, f, ensure_ascii=False, indent = 4)
-    #f.close()
-    #print("saved as:", json_file_name)
-
 def get_param(kind):
     if kind == 1:
-        return { "w": [5, 10], "h": [5, 10], "t": [2000, 4000] }
+        return { "q": [25, 100], "w": [5, 10], "h": [5, 10], "t": [100000, 200000] }
     elif kind == 2:
-        return { "w": [6, 12], "h": [6, 12], "t": [6000, 8000] }
+        return { "q": [25, 100], "w": [5, 10], "h": [5, 10], "t": [400000, 600000] }
     elif kind == 3:
-        return { "w": [7, 14], "h": [7, 14], "t": [10000, 20000] }
-    # for test
+        return { "q": [25, 100], "w": [5, 10], "h": [5, 10], "t": [800000, 1000000] }
     elif kind == 4:
-        return { "w": [5, 9], "h": [5, 9], "t": [4000, 8000] }
+        return { "q": [101, 200], "w": [10, 20], "h": [10, 20], "t": [100000, 200000] }
     elif kind == 5:
-        return { "w": [5, 11], "h": [5, 11], "t": [12000, 20000] }
+        return { "q": [101, 200], "w": [10, 20], "h": [10, 20], "t": [400000, 600000] }
     elif kind == 6:
-        return { "w": [5, 13], "h": [5, 13], "t": [30000, 40000] }
+        return { "q": [101, 200], "w": [10, 20], "h": [10, 20], "t": [800000, 1000000] }
 
     assert(False)
 
@@ -80,16 +71,32 @@ def gen_cuboid_dataset(dinfos, req_interval, out_dir, num):
             num_requests += num
             params = get_param(dtype)
 
-            for _ in range(num):
-                [w1, w2] = params["w"]
-                [h1, h2] = params["h"]
-                [t1, t2] = params["t"]
+            [q1, q2] = params["q"]
+            [w1, w2] = params["w"]
+            [h1, h2] = params["h"]
+            [t1, t2] = params["t"]
 
-                w = int(rng.integers(w1, w2))
-                h = int(rng.integers(h1, h2))
-                t = int(rng.integers(t1, t2))
-                if w > h:
-                    w, h = h, w
+            q_cands = []
+            table = {}
+            for q in range(q1, q2 + 1):
+                data = []
+
+                for w in range(w1, w2 + 1):
+                    h = q // w
+                    if q % w != 0 or h < h1 or h2 < h:
+                        continue
+                    data.append([w, h])
+
+                if len(data) > 0:
+                    q_cands.append(q)
+                    table[q] = data
+
+            for _ in range(num):
+                q_idx = int(rng.integers(0, len(q_cands)))
+                q = q_cands[q_idx]
+                table_idx = int(rng.integers(0, len(table[q])))
+                [w, h] = table[q][table_idx]
+                t = int(rng.integers(t1, t2 + 1))
 
                 job_data["programs"].append({"Cuboid": [{"pos": [0,0,0], "size_x": w, "size_y": h, "size_z": t}]})
 
@@ -111,7 +118,14 @@ def gen_cuboid_dataset(dinfos, req_interval, out_dir, num):
         print("saved as:", json_path)
 
 
-#gen_cuboid_dataset(dinfos=[[4, 333], [5, 333], [6, 334]], req_interval=2000, json_name_prefix="A", num=100)
-gen_cuboid_dataset(dinfos=[[4, 333], [5, 333], [6, 334]], req_interval=2000, out_dir="test", num=20)
+os.mkdir("dataset")
 
-
+gen_cuboid_dataset(dinfos=[[1, 200], [2, 20], [3, 20], [4, 20], [5, 20], [6, 20]], req_interval=50000, out_dir="dataset/A", num=10)
+gen_cuboid_dataset(dinfos=[[1, 20], [2, 200], [3, 20], [4, 20], [5, 20], [6, 20]], req_interval=50000, out_dir="dataset/B", num=10)
+gen_cuboid_dataset(dinfos=[[1, 20], [2, 20], [3, 200], [4, 20], [5, 20], [6, 20]], req_interval=50000, out_dir="dataset/C", num=10)
+gen_cuboid_dataset(dinfos=[[1, 20], [2, 20], [3, 20], [4, 200], [5, 20], [6, 20]], req_interval=50000, out_dir="dataset/D", num=10)
+gen_cuboid_dataset(dinfos=[[1, 20], [2, 20], [3, 20], [4, 20], [5, 200], [6, 20]], req_interval=50000, out_dir="dataset/E", num=10)
+gen_cuboid_dataset(dinfos=[[1, 20], [2, 20], [3, 20], [4, 20], [5, 20], [6, 200]], req_interval=50000, out_dir="dataset/F", num=10)
+gen_cuboid_dataset(dinfos=[[1, 50], [2, 50], [3, 50], [4, 50], [5, 50], [6, 50]], req_interval=50000, out_dir="dataset/G", num=10)
+gen_cuboid_dataset(dinfos=[[1, 90], [2, 90], [3, 90], [4, 10], [5, 10], [6, 10]], req_interval=50000, out_dir="dataset/H", num=10)
+gen_cuboid_dataset(dinfos=[[1, 10], [2, 10], [3, 10], [4, 90], [5, 90], [6, 90]], req_interval=50000, out_dir="dataset/I", num=10)
