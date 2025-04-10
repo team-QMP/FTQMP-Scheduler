@@ -55,8 +55,7 @@ impl Environment {
                 .iter()
                 .all(|b| 0 <= b.x && b.x < size_x && 0 <= b.y && b.y < size_y && 0 <= b.z),
             ProgramFormat::Cuboid(cs) => cs.iter().all(|c| {
-                let pos = c.pos();
-                0 <= c.x1() && c.x2() <= size_x && 0 <= c.y1() && c.y2() <= size_y && 0 <= pos.z
+                0 <= c.x1() && c.x2() <= size_x && 0 <= c.y1() && c.y2() <= size_y && 0 <= c.z1()
             }),
         }
     }
@@ -79,12 +78,11 @@ impl Environment {
                 }
                 ProgramFormat::Cuboid(cs) => {
                     for c in cs {
-                        self.end_pc =
-                            u64::max(self.end_pc, c.pos().z as u64 + c.size_z() as u64 + 1);
+                        self.end_pc = self.end_pc.max(c.z2() as u64);
                     }
                 }
             }
-            if p.z2() as u64 >= self.last_defrag_point {
+            if p.z2() as u64 > self.last_defrag_point {
                 self.next_defrag_cands.insert(p.z2() as ProgramCounter);
             }
         }
@@ -175,7 +173,7 @@ impl Environment {
         self.program_counter += advance_cycles;
 
         self.running_programs
-            .retain(|program| program.z2() >= self.program_counter as i32);
+            .retain(|program| program.z2() > self.program_counter as i32);
     }
 
     pub fn defrag(&mut self) {

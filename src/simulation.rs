@@ -9,7 +9,7 @@ use crate::error::QMPError;
 use crate::event::{Event, EventQueue, EventType};
 use crate::job::{Job, JobID, JobStatus};
 use crate::preprocess::{ConvertToCuboid, PreprocessKind, Preprocessor};
-use crate::program::Program;
+use crate::program::{is_overlap, Program};
 use crate::scheduler::{apply_schedule, Schedule, Scheduler};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,11 +78,6 @@ impl Simulator {
         // add initial scheduling point
         event_que.add_event(Event::start_scheduling(0));
 
-        //if config.enable_defrag {
-        //    let init_defrag_point = config.defrag_interval.unwrap();
-        //    event_que.add_event(Event::defragmentation(init_defrag_point));
-        //}
-
         Self {
             env: Environment::new(config.clone()),
             config,
@@ -132,11 +127,10 @@ impl Simulator {
                         self.env.defrag();
                     }
                     let issued_programs = self.scheduler.run(&self.env);
+                    let has_scheduled = !issued_programs.is_empty();
 
                     let elapsed_msec = start.elapsed().as_micros() as u64;
-                    response_time.push(elapsed_msec);
                     let elapsed_cycles = elapsed_msec.div_ceil(self.config.micro_sec_per_cycle);
-                    let has_scheduled = !issued_programs.is_empty();
 
                     // If the current job que is empty, then the scheduler waits until the next
                     // event will occur
@@ -149,6 +143,8 @@ impl Simulator {
                             .add_event(Event::start_scheduling(next_scheduling_time));
 
                         continue;
+                    } else {
+                        response_time.push(elapsed_msec);
                     }
 
                     tracing::debug!("Scheduling took {} cycles", elapsed_cycles);
@@ -171,6 +167,12 @@ impl Simulator {
                         }
                         let scheduled_program = apply_schedule(&job.program, &schedule);
                         if !self.env.issue_program(&scheduled_program) {
+                            tracing::error!("scheduled program: {:?}", scheduled_program);
+                            for p in self.env.running_programs() {
+                                if is_overlap(&scheduled_program, p) {
+                                    tracing::error!("overlap with {:?}", p);
+                                }
+                            }
                             return Err(QMPError::invalid_schedule_error(job.clone(), schedule));
                         }
 
