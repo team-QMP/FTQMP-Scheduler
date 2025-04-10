@@ -4,7 +4,6 @@ import glob
 import sys
 import math
 
-# turnaround (waiting 時間のほうがよいかも) 時間の改善を見るとかはある
 def analyze_exp_result(input_folder):
     json_files = glob.glob(os.path.join(input_folder, "result-*.json"))
     

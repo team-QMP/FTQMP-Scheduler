@@ -52,7 +52,7 @@ batch_size = ${batch_size}"
         dataset_file=$(basename "$dataset_file")
 
         local output_file="${exp_name}/result-${dataset_file}"
-        RUST_LOG=DEBUG ../target/release/qmp_scheduler --config-path ${exp_name}/${toml_filename} -o ${output_file} -d ${dataset_dir}/${dataset_file}
+        ../target/release/qmp_scheduler --config-path ${exp_name}/${toml_filename} -o ${output_file} -d ${dataset_dir}/${dataset_file}
     done
 
     python3 analyze_result.py ${exp_name}
@@ -61,12 +61,17 @@ batch_size = ${batch_size}"
 run_single_class_exp() {
     local class_name=$1
 
-    run_single_exp 1 20 20 5 "lp" false 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-LP-D=0"
-    run_single_exp 1 20 20 5 "lp" true 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-LP-D=1"
+    run_single_exp 1 20 20 5 "lp" false 200000 "convert-to-cuboid" 2 "dataset/${class_name}" "${class_name}-LP-D=0"
+    run_single_exp 1 20 20 5 "lp" true 200000 "convert-to-cuboid" 2 "dataset/${class_name}" "${class_name}-LP-D=1"
     run_single_exp 1 20 20 5 "cornergreedy" false 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=0"
     run_single_exp 1 20 20 5 "cornergreedy" true 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=1"
 }
 
+calc_defrag_improvement() {
+    class=$1
+    python3 calc_defrag_effect.py $1-LP-D=0 $1-LP-D=1 defrag_results/$1-LP.json
+    python3 calc_defrag_effect.py $1-CG-D=0 $1-CG-D=1 defrag_results/$1-CG.json
+}
 
 
 cd ..
@@ -93,3 +98,21 @@ run_single_class_exp "F"
 run_single_class_exp "G"
 run_single_class_exp "H"
 run_single_class_exp "I"
+
+
+# =========================================================
+# Analyze improvements by defragmentation
+# =========================================================
+
+rm -rf defrag_results
+mkdir defrag_results
+
+calc_defrag_improvement "A"
+calc_defrag_improvement "B"
+calc_defrag_improvement "C"
+calc_defrag_improvement "D"
+calc_defrag_improvement "E"
+calc_defrag_improvement "F"
+calc_defrag_improvement "G"
+calc_defrag_improvement "H"
+calc_defrag_improvement "I"
