@@ -52,11 +52,21 @@ batch_size = ${batch_size}"
         dataset_file=$(basename "$dataset_file")
 
         local output_file="${exp_name}/result-${dataset_file}"
-        ../target/release/qmp_scheduler --config-path ${exp_name}/${toml_filename} -o ${output_file} -d ${dataset_dir}/${dataset_file}
+        RUST_LOG=DEBUG ../target/release/qmp_scheduler --config-path ${exp_name}/${toml_filename} -o ${output_file} -d ${dataset_dir}/${dataset_file}
     done
 
     python3 analyze_result.py ${exp_name}
 }
+
+run_single_class_exp() {
+    local class_name=$1
+
+    run_single_exp 1 20 20 5 "lp" false 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-LP-D=0"
+    run_single_exp 1 20 20 5 "lp" true 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-LP-D=1"
+    run_single_exp 1 20 20 5 "cornergreedy" false 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=0"
+    run_single_exp 1 20 20 5 "cornergreedy" true 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=1"
+}
+
 
 
 cd ..
@@ -74,6 +84,12 @@ cd qce25_exp
 # throughput test
 # =========================================================
 
-run_single_exp 100 21 21 5 "cornergreedy" false 10000 "convert-to-cuboid" 120 "dataset/A" "A-CG-D=0"
-run_single_exp 100 21 21 5 "cornergreedy" true 10000 "convert-to-cuboid" 120 "dataset/A" "A-CG-D=1"
-
+run_single_class_exp "A"
+run_single_class_exp "B"
+run_single_class_exp "C"
+run_single_class_exp "D"
+run_single_class_exp "E"
+run_single_class_exp "F"
+run_single_class_exp "G"
+run_single_class_exp "H"
+run_single_class_exp "I"
