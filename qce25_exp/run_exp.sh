@@ -21,9 +21,10 @@ run_single_exp() {
         local enable_defrag="false"
     fi
 
+    local exp_dir=sim-results/${exp_name}
     echo "Preparing ${exp_name}..."
-    rm -rf ${exp_name}
-    mkdir ${exp_name}
+    rm -rf ${exp_dir}
+    mkdir ${exp_dir}
 
     local toml_filename="setting.toml"
     local toml_data="
@@ -43,7 +44,8 @@ kind = \"${scheduler}\"
 time_limit = ${time_limit}
 batch_size = ${batch_size}"
 
-    printf "${toml_data}" > ${exp_name}/${toml_filename}
+    local toml_path=${exp_dir}/${toml_filename}
+    printf "${toml_data}" > ${toml_path}
     echo "Output setting.toml"
     
     echo "Experiment start"
@@ -51,26 +53,37 @@ batch_size = ${batch_size}"
         [ -e "$dataset_file" ] || continue
         dataset_file=$(basename "$dataset_file")
 
-        local output_file="${exp_name}/result-${dataset_file}"
-        ../target/release/qmp_scheduler --config-path ${exp_name}/${toml_filename} -o ${output_file} -d ${dataset_dir}/${dataset_file}
+        local output_file="${exp_dir}/result-${dataset_file}"
+        ../target/release/qmp_scheduler --config-path ${toml_path} -o ${output_file} -d ${dataset_dir}/${dataset_file}
     done
 
-    python3 analyze_result.py ${exp_name}
+    python3 analyze_result.py ${exp_dir}
 }
 
 run_single_class_exp() {
     local class_name=$1
 
-    run_single_exp 1 20 20 5 "lp" false 200000 "convert-to-cuboid" 2 "dataset/${class_name}" "${class_name}-LP-D=0"
-    run_single_exp 1 20 20 5 "lp" true 200000 "convert-to-cuboid" 2 "dataset/${class_name}" "${class_name}-LP-D=1"
-    run_single_exp 1 20 20 5 "cornergreedy" false 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=0"
-    run_single_exp 1 20 20 5 "cornergreedy" true 200000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=1"
+    run_single_exp 1 20 20 5 "lp" false 20000 "convert-to-cuboid" 1 "dataset/${class_name}" "${class_name}-LP-D=0"
+    run_single_exp 1 20 20 5 "lp" true 20000 "convert-to-cuboid" 1 "dataset/${class_name}" "${class_name}-LP-D=1"
+    run_single_exp 1 20 20 5 "cornergreedy" false 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=0"
+    run_single_exp 1 20 20 5 "cornergreedy" true 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=1"
+}
+
+run_responsive_exp() {
+    local class_name=$1
+    local batch_size=$2
+    local time_limit=30
+
+    run_single_exp 1 20 20 ${batch_size} "lp" false 20000 "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "resp-${class_name}-LP-D=0_B=${batch_size}"
+    run_single_exp 1 20 20 ${batch_size} "lp" true 20000 "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "resp-${class_name}-LP-D=1_B=${batch_size}"
+    run_single_exp 1 20 20 ${batch_size} "cornergreedy" false 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "resp-${class_name}-CG-D=0_B=${batch_size}"
+    run_single_exp 1 20 20 ${batch_size} "cornergreedy" true 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "resp-${class_name}-CG-D=1_B=${batch_size}"
 }
 
 calc_defrag_improvement() {
     class=$1
-    python3 calc_defrag_effect.py $1-LP-D=0 $1-LP-D=1 defrag_results/$1-LP.json
-    python3 calc_defrag_effect.py $1-CG-D=0 $1-CG-D=1 defrag_results/$1-CG.json
+    python3 calc_defrag_effect.py sim-results/$1-LP-D=0 sim-results/$1-LP-D=1 sim-results/defrag_results/$1-LP.json
+    python3 calc_defrag_effect.py sim-results/$1-CG-D=0 sim-results/$1-CG-D=1 sim-results/defrag_results/$1-CG.json
 }
 
 
@@ -79,11 +92,20 @@ cargo build --release --features with-cplex
 
 cd qce25_exp
 
+if [ ! -d sim-results ]; then
+    mkdir sim-results
+fi
+
 # =========================================================
 # responsiveness test
 # =========================================================
 
-# TODO...
+echo "Start responsiveness tests..."
+run_responsive_exp "G" 5
+run_responsive_exp "G" 10
+run_responsive_exp "G" 15
+run_responsive_exp "G" 20
+echo "Finish responsiveness tests."
 
 # =========================================================
 # throughput test
@@ -104,8 +126,8 @@ run_single_class_exp "I"
 # Analyze improvements by defragmentation
 # =========================================================
 
-rm -rf defrag_results
-mkdir defrag_results
+rm -rf sim-results/defrag_results
+mkdir sim-results/defrag_results
 
 calc_defrag_improvement "A"
 calc_defrag_improvement "B"

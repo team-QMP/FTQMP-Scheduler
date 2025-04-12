@@ -51,7 +51,7 @@ def analyze_exp_result(input_folder):
     result["zratio_min"] = min(zratio)
     result["zratio_max"] = max(zratio)
 
-    output_json_file = os.path.join(input_folder, "all-result.txt")
+    output_json_file = os.path.join(input_folder, "all-result.json")
 
     with open(output_json_file, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent = 4)
