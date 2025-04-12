@@ -580,8 +580,7 @@ impl Scheduler for LPScheduler {
                         .cuboid()
                         .unwrap()
                         .iter()
-                        .map(|c| shrink_cuboid(c, 0)
-                        )
+                        .map(|c| shrink_cuboid(c, 0))
                         .collect()
                 })
                 .collect();
