@@ -62,11 +62,13 @@ batch_size = ${batch_size}"
 
 run_single_class_exp() {
     local class_name=$1
+    local dinterval=200000
+    local time_limit=2
 
-    run_single_exp 1 20 20 5 "lp" false 20000 "convert-to-cuboid" 1 "dataset/${class_name}" "${class_name}-LP-D=0"
-    run_single_exp 1 20 20 5 "lp" true 20000 "convert-to-cuboid" 1 "dataset/${class_name}" "${class_name}-LP-D=1"
-    run_single_exp 1 20 20 5 "cornergreedy" false 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=0"
-    run_single_exp 1 20 20 5 "cornergreedy" true 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "${class_name}-CG-D=1"
+    run_single_exp 1 20 20 5 "lp" false ${dinterval} "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "${class_name}-LP-D=0"
+    run_single_exp 1 20 20 5 "lp" true ${dinterval} "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "${class_name}-LP-D=1"
+    #run_single_exp 1 20 20 5 "cornergreedy" false ${dinterval} "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "${class_name}-CG-D=0"
+    #run_single_exp 1 20 20 5 "cornergreedy" true ${dinterval} "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "${class_name}-CG-D=1"
 }
 
 run_responsive_exp() {
@@ -76,8 +78,8 @@ run_responsive_exp() {
 
     run_single_exp 1 20 20 ${batch_size} "lp" false 20000 "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "resp-${class_name}-LP-D=0_B=${batch_size}"
     run_single_exp 1 20 20 ${batch_size} "lp" true 20000 "convert-to-cuboid" ${time_limit} "dataset/${class_name}" "resp-${class_name}-LP-D=1_B=${batch_size}"
-    run_single_exp 1 20 20 ${batch_size} "cornergreedy" false 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "resp-${class_name}-CG-D=0_B=${batch_size}"
-    run_single_exp 1 20 20 ${batch_size} "cornergreedy" true 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "resp-${class_name}-CG-D=1_B=${batch_size}"
+#    run_single_exp 1 20 20 ${batch_size} "cornergreedy" false 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "resp-${class_name}-CG-D=0_B=${batch_size}"
+#    run_single_exp 1 20 20 ${batch_size} "cornergreedy" true 20000 "convert-to-cuboid" 5 "dataset/${class_name}" "resp-${class_name}-CG-D=1_B=${batch_size}"
 }
 
 calc_defrag_improvement() {
@@ -100,12 +102,12 @@ fi
 # responsiveness test
 # =========================================================
 
-echo "Start responsiveness tests..."
-run_responsive_exp "G" 5
-run_responsive_exp "G" 10
-run_responsive_exp "G" 15
-run_responsive_exp "G" 20
-echo "Finish responsiveness tests."
+#echo "Start responsiveness tests..."
+#run_responsive_exp "G" 5
+#run_responsive_exp "G" 10
+#run_responsive_exp "G" 15
+#run_responsive_exp "G" 20
+#echo "Finish responsiveness tests."
 
 # =========================================================
 # throughput test
