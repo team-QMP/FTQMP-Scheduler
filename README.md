@@ -1,7 +1,7 @@
 # Online Scheduler for Quantum Multiprogramming
 This repository contains:
-- 【Python】 Toy compiler that compiles physical quantum circuit (QuantumCircuit in Qiskit and OpenQASM at the moment) into a logical program (using lattice surgery on surface codes with polycube representation)
-- 【Python】Visualizer for polycubes that export SolidPython objects or OpenSCAD files
+- 【Python】 Toy compiler that compiles physical quantum circuit (QuantumCircuit in Qiskit and OpenQASM at the moment) into a logical program (using lattice surgery on surface codes with polycube representation) [Tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/examples/generate_dataset.ipynb)
+- 【Python】Visualizer for polycubes that export SolidPython objects or OpenSCAD files [Tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_scad/solid_python_tutorial.ipynb)
 - 【Rust】Preprocessors, an online scheduler, and a simulator 
 
 # Requirements for Python
