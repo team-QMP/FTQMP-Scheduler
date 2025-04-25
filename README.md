@@ -4,13 +4,26 @@ This repository contains:
 - 【Python】Visualizer for polycubes that export SolidPython objects or OpenSCAD files [Tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_scad/solid_python_tutorial.ipynb)
 - 【Rust】Preprocessors, an online scheduler, and a simulator 
 
-# Requirements for Python
-- Visualization
-  - solidpython                   1.1.3
-  - viewscad                      0.2.0
-  - matplotlib                    3.7.2
-- compilation
-  - networkx                      3.1
-  - numpy                         1.24.3
-- Quantum Circuits
-  - qiskit                        0.46
+## Requirements
+Required packages for python are [HERE](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_examples/requirements.txt). You can install all with following command.
+```
+pip install -r requirements.txt
+```
+
+<!-- ## Installation and usage -->
+
+<!-- ## Examples -->
+
+## Citation
+
+ArXiv submission is available at [HERE](). If you use this repository in your research or work, please cite it using the following BibTeX entry:
+
+```
+@misc{your_citation_key,
+  author       = {Your Name},
+  title        = {Title of the Repository},
+  year         = {2025},
+  publisher    = {GitHub},
+  journal      = {GitHub repository},
+  howpublished = {\url{https://github.com/your_username/your_repo_name}},
+}```
