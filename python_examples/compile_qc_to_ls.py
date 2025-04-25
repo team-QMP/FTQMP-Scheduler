@@ -1,7 +1,6 @@
 from floorplan import build_graph_from_qubit_floorplan
 import networkx as nx
 
-
 def qc_to_LS(qc, floorplan):
     # return lattice for the given quantum circuit and floorplan
     
@@ -58,8 +57,9 @@ def qc_to_LS(qc, floorplan):
 
 def make_dict_of_qubits(floorplan):
     """
-    データ量子ビット、フレーム量子ビット、アンシラ量子ビットからなるfloorplanを受け取り、データ量子ビットとアンシラ量子ビットのdict{インデックス: 座標}を返す。
-    この時フレーム量子ビットはアンシラ量子ビットのdictに含める
+    input: floorplan
+    output: dict{index: coordinate} of data_qubits, frame_qubits and ancilla_qubits
+    Frame qubits are included in the dict of ancilla_qubits
     """
     data_qubits = {}
     ancilla_qubits = {}
@@ -102,9 +102,6 @@ def collision(occupied_coordinates, dead_coordinates, operation):
 def add_idling_op(polycube, time, dead_coordinates, occupied_coordinates,  data_qubits):
     # add identity operations for all data qubits exept occupied_coordinates, dead_coordinates
     data_key =  data_qubits.keys()
-    # print('dead_coordinates', dead_coordinates)
-    # print('occupied_coordinates', occupied_coordinates)
-    # print('data_qubits', data_qubits)
     for i in data_key:
         apply_identity = True
         # !deadかつ !occupiedならidentityをつける
