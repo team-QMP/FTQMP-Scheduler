@@ -1,12 +1,16 @@
 # Online Scheduler for Quantum Multiprogramming
 This repository contains:
-- 【Python】 Toy compiler that compiles physical quantum circuit (QuantumCircuit in Qiskit and OpenQASM at the moment) into a logical program (using lattice surgery on surface codes with polycube representation) [Tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/examples/generate_dataset.ipynb)
-- 【Python】Visualizer for polycubes that export SolidPython objects or OpenSCAD files [Tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_scad/solid_python_tutorial.ipynb)
-- 【Rust】Preprocessors, an online scheduler, and a simulator 
+
+0. 【Python】Quantum circuit generation in Qiskit and compilation process to polycube. It has a visualizer for a job / allocated multiple job. You can also export jobs as a JSON file or an OpenSCAD files. There is a jupyter notebook [tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_examples/circuit_generation_and_compilation.ipynb).
+1. 【Rust】Preprocessor: Approximate polycube with a bounding boxes.
+2. 【Rust】Scheduler: Allocate the job request to a space in the quantum processor
+3. 【Rust】Quantum Processor Simulator
+4. 【Rust】Defragmentation: Relocate job during execution to make a space for next job.
+
 
 ![flow](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/figs/QMP_flow.jpg)
 
-## Requirements
+## 【Python】 Requirements
 Required packages for python are [HERE](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_examples/requirements.txt). You can install all with following command.
 ```
 pip install -r requirements.txt
@@ -17,8 +21,7 @@ pip install -r requirements.txt
 <!-- ## Examples -->
 
 ## Citation
-
-ArXiv submission is available at [HERE](). If you use this repository in your research or work, please cite it using the following BibTeX entry:
+Please see [arXiv]() paper for more details. If you use this repository in your research or work, please cite it using the following BibTeX entry:
 
 ```
 @misc{your_citation_key,
