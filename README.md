@@ -21,14 +21,15 @@ pip install -r requirements.txt
 <!-- ## Examples -->
 
 ## Citation
-Please see [arXiv]() paper for more details. If you use this repository in your research or work, please cite it using the following BibTeX entry:
+Please see [arXiv](https://arxiv.org/abs/2505.06741) paper for more details. If you use this repository in your research or work, please cite it using the following BibTeX entry:
 
 ```
-@misc{your_citation_key,
-  author       = {Your Name},
-  title        = {Title of the Repository},
-  year         = {2025},
-  publisher    = {GitHub},
-  journal      = {GitHub repository},
-  howpublished = {\url{https://github.com/your_username/your_repo_name}},
+@misc{nishio2025onlinejobschedulerfaulttolerant,
+      title={Online Job Scheduler for Fault-tolerant Quantum Multiprogramming}, 
+      author={Shin Nishio and Ryo Wakizaka and Daisuke Sakuma and Yosuke Ueno and Yasunari Suzuki},
+      year={2025},
+      eprint={2505.06741},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph},
+      url={https://arxiv.org/abs/2505.06741}, 
 }```
