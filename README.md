@@ -1,4 +1,4 @@
-# Online Scheduler for Quantum Multiprogramming
+# Online Scheduler for Fault-Tolerant Quantum Multiprogramming (FTQMP)
 This repository contains:
 
 0. 【Python】Quantum circuit generation in Qiskit and compilation process to polycube. It has a visualizer for a job / allocated multiple job. You can also export jobs as a JSON file or an OpenSCAD files. There is a jupyter notebook [tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_examples/circuit_generation_and_compilation.ipynb).
@@ -9,6 +9,21 @@ This repository contains:
 
 
 ![flow](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/figs/QMP_flow.jpg)
+
+## How to build
+
+WIP.
+
+### Docker image
+
+You can build our schedulers by the following commands:
+
+```
+$ docker build -t ftqmp:latest .
+$ docker run -it --name ftqmp ftqmp:latest
+```
+
+This will start bash with the executable `qmp_scheduler` enabled in the container.
 
 ## 【Python】 Requirements
 Required packages for python are [HERE](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_examples/requirements.txt). You can install all with following command.
