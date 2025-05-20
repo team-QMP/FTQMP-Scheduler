@@ -1,4 +1,4 @@
-FROM rust:1.83-slim AS builder
+FROM rust:1.83-slim-bullseye AS builder
 
 WORKDIR /app
 
@@ -7,24 +7,26 @@ RUN apt-get update \
        pkg-config \
        libclang-dev clang \
        zlib1g-dev \
-       coinor-cbc coinor-libcbc-dev
+       coinor-cbc coinor-libcbc-dev \
+  && rm -rf /var/lib/apt/lists/*
 
-COPY rust-toolchain.toml ./
-
-# For build cache
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src \
-    && echo "fn main() { println!(\"hello\"); }" > src/main.rs \
-    && cargo build --release \
-    && rm -rf src
-
+COPY rust-toolchain.toml Cargo.toml Cargo.lock ./
 COPY src ./src
+
 RUN cargo build --release
 
 # runtime stage
-FROM alpine:latest
+FROM debian:bullseye-slim
+
+WORKDIR /ftqmp
 
 COPY --from=builder /app/target/release/qmp_scheduler /usr/local/bin/qmp_scheduler
+COPY examples ./examples
 
-ENTRYPOINT ["/usr/local/bin/qmp_scheduler"]
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+       coinor-cbc coinor-libcbc-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT [ "/bin/bash" ]
 
