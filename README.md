@@ -10,9 +10,8 @@ This repository contains:
 
 ![flow](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/figs/QMP_flow.jpg)
 
-## How to build
 
-WIP.
+## How to build
 
 ### Docker image
 
@@ -25,15 +24,78 @@ $ docker run -it --name ftqmp ftqmp:latest
 
 This will start bash with the executable `qmp_scheduler` enabled in the container.
 
+
 ## 【Python】 Requirements
 Required packages for python are [HERE](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_examples/requirements.txt). You can install all with following command.
 ```
 pip install -r requirements.txt
 ```
 
-<!-- ## Installation and usage -->
+## How to use
 
-<!-- ## Examples -->
+The current FTQMP scheduler (`qmp_scheduler`) takes three options as input:
+
+```
+qmp_scheduler -d <dataset-file> --config-path <config-file> -o <output-path>
+```
+
+- `dataset-file` is a JSON file containing program (polycube or cuboid) and request data,
+- `config-file` is a TOML file containing the parameters for the simulation, and
+- `output-path` specifies the path where the result JSON file will be output.
+
+Please see `examples/` for details of the structure of dataset JSON files and config TOML files.
+
+### The data format of JSON for datasets
+
+```json
+{
+    "programs": [
+        <program1>,
+        ...
+    ],
+    "job_requests": [
+        [program_id1, tm],
+        ...,
+        [program_idm, tm]
+    ]
+}
+```
+
+A job request `[program_id, t]` means the i-th program will be requested at time `t`.
+Note that `program_id` and `t` must be integer values.
+
+Currently, either the polycube or k-cuboid representation is available as program data.
+
+```json
+{
+    "Polycube": {
+        "blocks": [
+            [x1, y1, z1],
+            ...,
+            [xn, yn, zn]
+        ]
+    }
+}
+```
+
+`xi`, `yi`, `zi` are integer variables.
+
+```json
+{
+    "Cuboid": [
+        {
+            "pos": [x1, y1, z1],
+            "size_x": a1,
+            "size_y": b1,
+            "size_z": c1,
+        },
+        ...
+    ]
+}
+```
+
+We have to note that some features are not supported for the cuboid representation with k >= 2.
+
 
 ## Citation
 Please see [arXiv](https://arxiv.org/abs/2505.06741) paper for more details. If you use this repository in your research or work, please cite it using the following BibTeX entry:
