@@ -58,7 +58,7 @@ Please see `examples/` for details of the structure of dataset JSON files and co
         ...
     ],
     "job_requests": [
-        [program_id1, tm],
+        [program_id1, t1],
         ...,
         [program_idm, tm]
     ]
