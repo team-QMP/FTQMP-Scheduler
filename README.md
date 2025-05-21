@@ -47,7 +47,7 @@ Please see `examples/` for details of the structure of dataset JSON files and co
 
 ### The data format of JSON for datasets
 
-```json
+```
 {
     "programs": [
         <program1>,
