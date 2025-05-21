@@ -61,12 +61,12 @@ Please see `examples/` for details of the structure of dataset JSON files and co
 }
 ```
 
-A job request `[program_id, t]` means the i-th program will be requested at time `t`.
-Note that `program_id` and `t` must be integer values.
+- A job request `[program_id, t]` means the i-th program will be requested at time `t`.
+- `program_id` and `t` must be integer values.
 
 Currently, either the polycube or k-cuboid representation is available as program data.
 
-```json
+```
 {
     "Polycube": {
         "blocks": [
@@ -78,9 +78,10 @@ Currently, either the polycube or k-cuboid representation is available as progra
 }
 ```
 
-`xi`, `yi`, `zi` are integer variables.
+- `[xi, yi, zi]` represents the i-th block of the polycube
+- `xi`, `yi`, `zi` are must be integer values
 
-```json
+```
 {
     "Cuboid": [
         {
@@ -93,6 +94,11 @@ Currently, either the polycube or k-cuboid representation is available as progra
     ]
 }
 ```
+
+- Each cuboid consists of `pos`, `size_x`, `size_y`, `size_z`
+    - `pos` is the base point of the cuboid, which has three integer values `xi`, `yi`, `zi`
+    - `size_x`, `size_y`, `size_z` are the sizes of the cuboid
+    - that is, each cuboid is `[xi, xi + size_xi) * [yi, yi + size_yi) * [zi, zi + size_zi)`
 
 We have to note that some features are not supported for the cuboid representation with k >= 2.
 
