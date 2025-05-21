@@ -1,4 +1,7 @@
 # Online Scheduler for Fault-Tolerant Quantum Multiprogramming (FTQMP)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 This repository contains:
 
 0. 【Python】Quantum circuit generation in Qiskit and compilation process to polycube. It has a visualizer for a job / allocated multiple job. You can also export jobs as a JSON file or an OpenSCAD files. There is a jupyter notebook [tutorial](https://github.com/team-QMP/FTQMP-Scheduler/blob/main/python_examples/circuit_generation_and_compilation.ipynb).
