@@ -155,13 +155,19 @@ impl Environment {
                 self.program_counter = suspend_point;
                 advance_cycles -= tmp_advance_cycles;
                 // then wait
-                let wait_cycles = if until > self.current_time {
-                    advance_cycles.min(until - self.current_time)
+                let need_to_wait = if until > self.current_time {
+                    until - self.current_time
                 } else {
                     0
                 };
-                self.current_time += wait_cycles;
-                advance_cycles -= wait_cycles;
+                if advance_cycles >= need_to_wait {
+                    self.current_time += need_to_wait;
+                    advance_cycles -= need_to_wait;
+                } else {
+                    self.current_time += advance_cycles;
+                    advance_cycles = 0;
+                    self.suspend_until.insert(suspend_point, until);
+                }
             } else {
                 // leave the entry
                 self.suspend_until.insert(suspend_point, until);
