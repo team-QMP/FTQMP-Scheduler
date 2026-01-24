@@ -1,0 +1,28 @@
+{
+    "programs": [
+        {
+            "name": "sample_program",
+            "instructions": [
+                { "name": "H", "pos": [0, 0], "aux": [1, 0], "latency": 2 },
+                { "name": "S", "pos": [1, 0], "aux": [2, 0], "latency": 1 },
+                { "name": "Z", "pos": [2, 1], "latency": 3 },
+                { "name": "X", "pos": [2, 2], "latency": 3 },
+                { "name": "Meas", "path": [[0, 0], [1, 0], [1, 1]], "latency": 4 },
+                { "name": "MP", "path": [[2, 0], [2, 1]], "latency": 4 }
+            ]
+        },
+        {
+            "name": "sample_program_2",
+            "instructions": [
+                { "name": "H", "pos": [1, 1], "aux": [1, 2], "latency": 2 },
+                { "name": "Z", "pos": [2, 2], "latency": 3 },
+                { "name": "Meas", "path": [[1, 1]], "latency": 4 }
+            ]
+        }
+    ],
+    "job_requests": [
+        [0, 0],
+        [5, 0],
+        [10, 1]
+    ]
+}
