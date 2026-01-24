@@ -201,7 +201,11 @@ pub fn cut_program_at_z(p: Program, z: i32) -> (Option<Program>, Option<Program>
 
 #[cfg(test)]
 pub mod test {
-    use crate::program::{cut_program_at_z, Coordinate, Cuboid, InternalFormat, Program};
+    use crate::program::{
+        cut_program_at_z, instr::InstructionKind, instr::Location2D, Coordinate, Cuboid,
+        InternalFormat, Program,
+    };
+    use std::path::PathBuf;
 
     #[test]
     fn test_cut_program_at_z() {
@@ -216,5 +220,62 @@ pub mod test {
         let c2_above = Cuboid::new(Coordinate::new(0, 0, 3), 1, 1, 2);
         assert_eq!(below_cs, vec![c1, c2_below]);
         assert_eq!(above_cs, vec![c2_above, c3]);
+    }
+
+    #[test]
+    fn test_parse_program_json() {
+        let program = Program::from_json_file(PathBuf::from("samples/program.json"))
+            .expect("parse samples/program.json");
+        let instrs = program.instructions();
+        assert_eq!(instrs.len(), 6);
+
+        assert_eq!(instrs[0].latency(), 2);
+        match instrs[0].kind() {
+            InstructionKind::H { pos, aux } => {
+                assert_eq!(*pos, Location2D(0, 0));
+                assert_eq!(*aux, Location2D(1, 0));
+            }
+            other => panic!("expected H, got {other:?}"),
+        }
+
+        assert_eq!(instrs[1].latency(), 1);
+        match instrs[1].kind() {
+            InstructionKind::S { pos, aux } => {
+                assert_eq!(*pos, Location2D(1, 0));
+                assert_eq!(*aux, Location2D(2, 0));
+            }
+            other => panic!("expected S, got {other:?}"),
+        }
+
+        assert_eq!(instrs[2].latency(), 3);
+        match instrs[2].kind() {
+            InstructionKind::Z { pos } => assert_eq!(*pos, Location2D(2, 1)),
+            other => panic!("expected Z, got {other:?}"),
+        }
+
+        assert_eq!(instrs[3].latency(), 3);
+        match instrs[3].kind() {
+            InstructionKind::X { pos } => assert_eq!(*pos, Location2D(2, 2)),
+            other => panic!("expected X, got {other:?}"),
+        }
+
+        assert_eq!(instrs[4].latency(), 4);
+        match instrs[4].kind() {
+            InstructionKind::Meas { path } => {
+                assert_eq!(
+                    path,
+                    &vec![Location2D(0, 0), Location2D(1, 0), Location2D(1, 1)]
+                );
+            }
+            other => panic!("expected Meas, got {other:?}"),
+        }
+
+        assert_eq!(instrs[5].latency(), 4);
+        match instrs[5].kind() {
+            InstructionKind::MP { path } => {
+                assert_eq!(path, &vec![Location2D(2, 0), Location2D(2, 1)]);
+            }
+            other => panic!("expected MP, got {other:?}"),
+        }
     }
 }

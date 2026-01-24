@@ -2,9 +2,19 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Instruction {
-    latency: i32,
     #[serde(flatten)]
     kind: InstructionKind,
+    latency: i32,
+}
+
+impl Instruction {
+    pub fn kind(&self) -> &InstructionKind {
+        &self.kind
+    }
+
+    pub fn latency(&self) -> i32 {
+        self.latency
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
