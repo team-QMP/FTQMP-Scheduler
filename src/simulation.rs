@@ -67,10 +67,11 @@ impl Simulator {
 
         let mut job_list = Vec::new();
         let mut event_que = EventQueue::new();
-        for (i, (t, p)) in dataset.requests().into_iter().enumerate() {
+        for (i, req) in dataset.requests().enumerate() {
+            let t = req.arrival_time();
             let p = preprocessors
                 .iter()
-                .fold(p.clone(), |p, proc| proc.process(p));
+                .fold(req.program().clone(), |p, proc| proc.process(p));
             let job = Job::new(i as JobID, t, p.clone());
             job_list.push(job);
             event_que.add_event(Event::request_job(t, i as JobID));
