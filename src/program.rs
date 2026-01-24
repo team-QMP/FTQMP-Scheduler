@@ -41,7 +41,8 @@ impl Program {
 
     pub fn from_json_file(path: PathBuf) -> Result<Self> {
         let json_str = std::fs::read_to_string(path)?;
-        let program: Program = serde_json::from_str(&json_str)?;
+        let mut program: Program = serde_json::from_str(&json_str)?;
+        program.build_internal_from_instructions()?;
         Ok(program)
     }
 
@@ -51,6 +52,40 @@ impl Program {
             name: None,
             internal_format: None,
         }
+    }
+
+    pub fn build_internal_from_instructions(&mut self) -> Result<()> {
+        if self.has_format() {
+            return Ok(());
+        }
+        if self.instrs.is_empty() {
+            anyhow::bail!("program has no instructions to build internal representation");
+        }
+
+        let mut blocks = Vec::new();
+        let mut current_z = 0;
+        for instr in &self.instrs {
+            let latency = instr.latency();
+            if latency <= 0 {
+                anyhow::bail!("instruction latency must be positive: {latency}");
+            }
+            let positions = instr.positions();
+            for dz in 0..latency {
+                let z = current_z + dz;
+                for pos in &positions {
+                    blocks.push(Coordinate::new(pos.0, pos.1, z));
+                }
+            }
+            current_z += latency;
+        }
+
+        if blocks.is_empty() {
+            anyhow::bail!("program has no occupied positions to build internal representation");
+        }
+
+        let polycube = Polycube::new(blocks);
+        self.internal_format = Some(InternalFormat::Cuboid(vec![Cuboid::from(&polycube)]));
+        Ok(())
     }
 
     pub fn set_format(&mut self, format: InternalFormat) {
@@ -202,8 +237,8 @@ pub fn cut_program_at_z(p: Program, z: i32) -> (Option<Program>, Option<Program>
 #[cfg(test)]
 pub mod test {
     use crate::program::{
-        cut_program_at_z, instr::InstructionKind, instr::Location2D, Coordinate, Cuboid,
-        InternalFormat, Program,
+        cut_program_at_z, instr::Instruction, instr::InstructionKind, instr::Location2D,
+        Coordinate, Cuboid, InternalFormat, Program,
     };
     use std::path::PathBuf;
 
@@ -277,5 +312,35 @@ pub mod test {
             }
             other => panic!("expected MP, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn test_build_internal_from_instructions() {
+        let instrs = vec![
+            Instruction::new(
+                InstructionKind::H {
+                    pos: Location2D(0, 0),
+                    aux: Location2D(0, 1),
+                },
+                2,
+            ),
+            Instruction::new(
+                InstructionKind::Z {
+                    pos: Location2D(1, 0),
+                },
+                1,
+            ),
+        ];
+        let mut program = Program::with_instructions(instrs);
+        program
+            .build_internal_from_instructions()
+            .expect("build internal format");
+
+        let cuboids = program.cuboid().expect("has cuboid");
+        assert_eq!(cuboids.len(), 1);
+        assert_eq!(cuboids[0].pos(), &Coordinate::new(0, 0, 0));
+        assert_eq!(cuboids[0].size_x(), 2);
+        assert_eq!(cuboids[0].size_y(), 2);
+        assert_eq!(cuboids[0].size_z(), 3);
     }
 }

@@ -60,7 +60,10 @@ impl<'a> JobRequestRef<'a> {
 impl Dataset {
     pub fn from_json_file(path: PathBuf) -> anyhow::Result<Dataset> {
         let json_str = std::fs::read_to_string(path)?;
-        let dataset: Dataset = serde_json::from_str(&json_str)?;
+        let mut dataset: Dataset = serde_json::from_str(&json_str)?;
+        for program in &mut dataset.programs {
+            program.build_internal_from_instructions()?;
+        }
         dataset.validate()?;
         Ok(dataset)
     }
@@ -68,8 +71,8 @@ impl Dataset {
     pub fn get_request(&self, id: usize) -> JobRequestRef<'_> {
         let req = &self.job_requests[id];
         JobRequestRef {
-            arrival_time: req.arrival_time,
-            program: &self.programs[req.program_id],
+            arrival_time: req.arrival_time(),
+            program: &self.programs[req.program_id()],
         }
     }
 
@@ -79,8 +82,8 @@ impl Dataset {
 
     pub fn requests(&self) -> impl Iterator<Item = JobRequestRef<'_>> {
         self.job_requests.iter().map(|req| JobRequestRef {
-            arrival_time: req.arrival_time,
-            program: &self.programs[req.program_id],
+            arrival_time: req.arrival_time(),
+            program: &self.programs[req.program_id()],
         })
     }
 
