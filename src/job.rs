@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-use crate::program::{Program, ProgramCounter, ProgramFormat};
+use crate::program::{Program, ProgramCounter, InternalFormat};
 
 pub type JobID = u32;
 
@@ -47,8 +47,8 @@ impl Job {
 
     pub fn total_execution_cycle(&self) -> ProgramCounter {
         match self.program.format() {
-            ProgramFormat::Polycube(poly) => (poly.max_z() - poly.min_z() + 1) as ProgramCounter,
-            ProgramFormat::Cuboid(cs) => {
+            InternalFormat::Polycube(poly) => (poly.max_z() - poly.min_z() + 1) as ProgramCounter,
+            InternalFormat::Cuboid(cs) => {
                 let (z1, z2) =
                     cs.iter()
                         .fold((ProgramCounter::MAX, ProgramCounter::MIN), |(z1, z2), c| {

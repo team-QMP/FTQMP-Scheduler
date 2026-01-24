@@ -232,7 +232,7 @@ pub mod test {
     use crate::preprocess::polycube_to_cuboid;
     use crate::preprocess::polycube_to_float_coordinates;
     use crate::preprocess::print_floatcoordinates;
-    use crate::program::polycube::create_random_polycube;
+    use crate::program::shape::create_random_polycube;
     use nalgebra::Vector3;
 
     #[test]

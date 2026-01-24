@@ -3,7 +3,7 @@ use std::time::Instant;
 use crate::config::SimulationConfig;
 use crate::environment::Environment;
 use crate::job::Job;
-use crate::program::{Coordinate, Cuboid, Program, ProgramFormat};
+use crate::program::{Coordinate, Cuboid, Program, InternalFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
 #[cfg(not(feature = "with-cplex"))]
@@ -163,7 +163,7 @@ impl PolycubePackingProblem {
                 s_vars.insert(s_var_key, s_var);
                 s_sum += s_var;
                 match scheduled.format() {
-                    ProgramFormat::Polycube(p) => {
+                    InternalFormat::Polycube(p) => {
                         for block in p.blocks() {
                             if let Some(exp) = is_block_present.get_mut(block) {
                                 *exp += s_var;
@@ -492,10 +492,10 @@ impl Scheduler for LPScheduler {
         let zsum = jobs
             .iter()
             .map(|job| match job.program.format() {
-                ProgramFormat::Polycube(p) => {
+                InternalFormat::Polycube(p) => {
                     p.blocks().iter().map(|c| c.z).max().unwrap() as u32 + 1
                 }
-                ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.size_z() as u32).sum(),
+                InternalFormat::Cuboid(cs) => cs.iter().map(|c| c.size_z() as u32).sum(),
             })
             .sum::<u32>();
 
@@ -633,7 +633,7 @@ impl LPScheduler {
 
 #[cfg(test)]
 pub mod test {
-    use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
+    use crate::program::{Coordinate, Cuboid, Polycube, Program, InternalFormat};
     use crate::scheduler::lp_scheduler::{CuboidPackingProblem, PackingConfig};
     use crate::scheduler::{apply_schedule, apply_schedule_to_cuboid};
 
@@ -648,7 +648,7 @@ pub mod test {
             min_z: 0,
             max_z: 8,
         };
-        let format = ProgramFormat::Polycube(Polycube::from(&[
+        let format = InternalFormat::Polycube(Polycube::from(&[
             (0, 0, 0),
             (0, 1, 0),
             (0, 2, 0),

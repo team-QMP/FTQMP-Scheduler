@@ -1,7 +1,7 @@
 use crate::{
     config::SimulationConfig,
     program::{
-        cut_program_at_z, is_overlap, Coordinate, Cuboid, Program, ProgramCounter, ProgramFormat,
+        cut_program_at_z, is_overlap, Coordinate, Cuboid, Program, ProgramCounter, InternalFormat,
     },
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -50,11 +50,11 @@ impl Environment {
         let size_x = self.config.size_x as i32;
         let size_y = self.config.size_y as i32;
         match p.format() {
-            ProgramFormat::Polycube(polycube) => polycube
+            InternalFormat::Polycube(polycube) => polycube
                 .blocks()
                 .iter()
                 .all(|b| 0 <= b.x && b.x < size_x && 0 <= b.y && b.y < size_y && 0 <= b.z),
-            ProgramFormat::Cuboid(cs) => cs.iter().all(|c| {
+            InternalFormat::Cuboid(cs) => cs.iter().all(|c| {
                 0 <= c.x1() && c.x2() <= size_x && 0 <= c.y1() && c.y2() <= size_y && 0 <= c.z1()
             }),
         }
@@ -71,12 +71,12 @@ impl Environment {
             self.issued_programs.push(p.clone());
             self.running_programs.push(p.clone());
             match p.format() {
-                ProgramFormat::Polycube(p) => {
+                InternalFormat::Polycube(p) => {
                     for b in p.blocks() {
                         self.end_pc = u64::max(self.end_pc, b.z as u64 + 1);
                     }
                 }
-                ProgramFormat::Cuboid(cs) => {
+                InternalFormat::Cuboid(cs) => {
                     for c in cs {
                         self.end_pc = self.end_pc.max(c.z2() as u64);
                     }
@@ -366,7 +366,7 @@ fn drop_programs(
 
     let result = result
         .into_iter()
-        .map(|c| Program::new(ProgramFormat::Cuboid(vec![c])))
+        .map(|c| Program::new(InternalFormat::Cuboid(vec![c])))
         .collect();
     (x_cost + y_cost, move_areas, result)
 }
@@ -375,7 +375,7 @@ fn drop_programs(
 mod test {
     use crate::config::SimulationConfig;
     use crate::environment::Environment;
-    use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
+    use crate::program::{Coordinate, Cuboid, Polycube, Program, InternalFormat};
     use crate::test_utils;
 
     use super::drop_programs;
@@ -385,13 +385,13 @@ mod test {
         let config = SimulationConfig::from_toml(test_utils::TEST_TOML_FILE.into()).unwrap();
         let mut env = Environment::new(config);
 
-        let p1 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+        let p1 = Program::new(InternalFormat::Polycube(Polycube::new(vec![
             Coordinate::new(0, 0, 0),
         ])));
-        let p2 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+        let p2 = Program::new(InternalFormat::Polycube(Polycube::new(vec![
             Coordinate::new(1, 1, 1),
         ])));
-        let p3 = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+        let p3 = Program::new(InternalFormat::Polycube(Polycube::new(vec![
             Coordinate::new(0, 0, 0),
         ])));
 
@@ -408,18 +408,18 @@ mod test {
         let c1 = Cuboid::new(Coordinate::new(0, 1, 0), 2, 2, 2);
         let c2 = Cuboid::new(Coordinate::new(2, 0, 0), 2, 2, 2);
         let c3 = Cuboid::new(Coordinate::new(1, 3, 1), 2, 2, 2);
-        let p1 = Program::new(ProgramFormat::Cuboid(vec![c1]));
-        let p2 = Program::new(ProgramFormat::Cuboid(vec![c2]));
-        let p3 = Program::new(ProgramFormat::Cuboid(vec![c3]));
+        let p1 = Program::new(InternalFormat::Cuboid(vec![c1]));
+        let p2 = Program::new(InternalFormat::Cuboid(vec![c2]));
+        let p3 = Program::new(InternalFormat::Cuboid(vec![c3]));
 
         let (_, _, ps) = drop_programs(0, vec![p1, p2, p3]);
 
         let c1_moved = Cuboid::new(Coordinate::new(0, 0, 0), 2, 2, 2);
         let c2_moved = Cuboid::new(Coordinate::new(2, 0, 0), 2, 2, 2);
         let c3_moved = Cuboid::new(Coordinate::new(0, 2, 1), 2, 2, 2);
-        let p1_moved = Program::new(ProgramFormat::Cuboid(vec![c1_moved]));
-        let p2_moved = Program::new(ProgramFormat::Cuboid(vec![c2_moved]));
-        let p3_moved = Program::new(ProgramFormat::Cuboid(vec![c3_moved]));
+        let p1_moved = Program::new(InternalFormat::Cuboid(vec![c1_moved]));
+        let p2_moved = Program::new(InternalFormat::Cuboid(vec![c2_moved]));
+        let p3_moved = Program::new(InternalFormat::Cuboid(vec![c3_moved]));
         eprintln!("{:?}", ps);
 
         assert!(ps.contains(&p1_moved));

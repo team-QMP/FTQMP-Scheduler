@@ -1,60 +1,106 @@
-pub mod cuboid;
-pub mod polycube;
+pub mod instr;
+pub mod shape;
 
-pub use cuboid::Cuboid;
-pub use polycube::{Coordinate, Polycube};
+pub use shape::{Coordinate, Cuboid, Polycube};
 
+use instr::Instruction;
+use shape::{is_overlap_cuboids, is_overlap_polycube_cuboid, is_overlap_polycubes};
+
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 pub type ProgramCounter = u64;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum ProgramFormat {
+pub enum InternalFormat {
     Polycube(Polycube),
     Cuboid(Vec<Cuboid>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Program {
-    #[serde(flatten)]
-    format: ProgramFormat,
+    #[serde(default, rename = "instructions", alias = "instrs")]
+    instrs: Vec<Instruction>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+
+    #[serde(skip)]
+    internal_format: Option<InternalFormat>,
 }
 
 impl Program {
-    pub fn new(format: ProgramFormat) -> Self {
-        Program { format }
+    pub fn new(format: InternalFormat) -> Self {
+        Program {
+            instrs: Vec::new(),
+            name: None,
+            internal_format: Some(format),
+        }
+    }
+
+    pub fn from_json_file(path: PathBuf) -> Result<Self> {
+        let json_str = std::fs::read_to_string(path)?;
+        let program: Program = serde_json::from_str(&json_str)?;
+        Ok(program)
+    }
+
+    pub fn with_instructions(instrs: Vec<Instruction>) -> Self {
+        Program {
+            instrs,
+            name: None,
+            internal_format: None,
+        }
+    }
+
+    pub fn set_format(&mut self, format: InternalFormat) {
+        self.internal_format = Some(format);
+    }
+
+    pub fn has_format(&self) -> bool {
+        self.internal_format.is_some()
+    }
+
+    pub fn format_opt(&self) -> Option<&InternalFormat> {
+        self.internal_format.as_ref()
+    }
+
+    pub fn instructions(&self) -> &[Instruction] {
+        &self.instrs
     }
 
     pub fn is_polycube(&self) -> bool {
-        matches!(&self.format, ProgramFormat::Polycube(_))
+        matches!(&self.internal_format, Some(InternalFormat::Polycube(_)))
     }
 
     pub fn polycube(&self) -> Option<&Polycube> {
-        match &self.format {
-            ProgramFormat::Polycube(p) => Some(p),
+        match &self.internal_format {
+            Some(InternalFormat::Polycube(p)) => Some(p),
             _ => None,
         }
     }
 
     pub fn is_cuboid(&self) -> bool {
-        matches!(&self.format, ProgramFormat::Cuboid(_))
+        matches!(&self.internal_format, Some(InternalFormat::Cuboid(_)))
     }
 
     pub fn cuboid(&self) -> Option<&Vec<Cuboid>> {
-        match &self.format {
-            ProgramFormat::Cuboid(c) => Some(c),
+        match &self.internal_format {
+            Some(InternalFormat::Cuboid(c)) => Some(c),
             _ => None,
         }
     }
 
-    pub fn format(&self) -> &ProgramFormat {
-        &self.format
+    pub fn format(&self) -> &InternalFormat {
+        self.internal_format
+            .as_ref()
+            .expect("internal format must be set before use")
     }
 
     pub fn pos(&self) -> Coordinate {
         match self.format() {
-            ProgramFormat::Polycube(p) => p.pos(),
-            ProgramFormat::Cuboid(cs) => {
+            InternalFormat::Polycube(p) => p.pos(),
+            InternalFormat::Cuboid(cs) => {
                 assert!(cs.len() == 1);
                 cs[0].pos().clone()
             }
@@ -63,19 +109,19 @@ impl Program {
 
     pub fn z2(&self) -> i32 {
         match self.format() {
-            ProgramFormat::Polycube(p) => p.max_z() + 1,
-            ProgramFormat::Cuboid(cs) => cs.iter().map(|c| c.z2()).max().unwrap(),
+            InternalFormat::Polycube(p) => p.max_z() + 1,
+            InternalFormat::Cuboid(cs) => cs.iter().map(|c| c.z2()).max().unwrap(),
         }
     }
 
     /// Returns the burst time (= execution time) in cycles
     pub fn burst_time(&self) -> u64 {
-        match &self.format {
-            ProgramFormat::Polycube(poly) => {
+        match self.format() {
+            InternalFormat::Polycube(poly) => {
                 assert!(poly.max_z() >= poly.min_z());
                 (poly.max_z() - poly.min_z() + 1) as u64
             }
-            ProgramFormat::Cuboid(cs) => {
+            InternalFormat::Cuboid(cs) => {
                 let (min_z, max_z) = cs.iter().fold((u64::MAX, u64::MIN), |(min_z, max_z), c| {
                     let z_pos = c.pos().z as u64;
                     (
@@ -89,39 +135,16 @@ impl Program {
     }
 }
 
-pub fn is_overlap_polycubes(p1: &Polycube, p2: &Polycube) -> bool {
-    p1.blocks()
-        .iter()
-        .any(|b1| p2.blocks().iter().any(|b2| b1 == b2))
-}
-
-pub fn is_overlap_cuboids(c1: &Cuboid, c2: &Cuboid) -> bool {
-    let is_overlap_x = !(c1.x2() <= c2.x1() || c2.x2() <= c1.x1());
-    let is_overlap_y = !(c1.y2() <= c2.y1() || c2.y2() <= c1.y1());
-    let is_overlap_z = !(c1.z2() <= c2.z1() || c2.z2() <= c1.z1());
-    is_overlap_x && is_overlap_y && is_overlap_z
-}
-
-pub fn is_overlap_polycube_cuboid(p: &Polycube, c: &Cuboid) -> bool {
-    p.blocks().iter().any(|b| {
-        let cp = c.pos();
-        cp.x <= b.x
-            && b.x < cp.x + c.size_x() as i32
-            && cp.y <= b.y
-            && b.y <= cp.y + c.size_y() as i32
-            && cp.z <= b.z
-            && b.z <= cp.z + c.size_z() as i32
-    })
-}
-
 pub fn is_overlap(p1: &Program, p2: &Program) -> bool {
     match (p1.format(), p2.format()) {
-        (ProgramFormat::Polycube(p1), ProgramFormat::Polycube(p2)) => is_overlap_polycubes(p1, p2),
-        (ProgramFormat::Polycube(p), ProgramFormat::Cuboid(cs))
-        | (ProgramFormat::Cuboid(cs), ProgramFormat::Polycube(p)) => {
+        (InternalFormat::Polycube(p1), InternalFormat::Polycube(p2)) => {
+            is_overlap_polycubes(p1, p2)
+        }
+        (InternalFormat::Polycube(p), InternalFormat::Cuboid(cs))
+        | (InternalFormat::Cuboid(cs), InternalFormat::Polycube(p)) => {
             cs.iter().any(|c| is_overlap_polycube_cuboid(p, c))
         }
-        (ProgramFormat::Cuboid(cs1), ProgramFormat::Cuboid(cs2)) => cs1
+        (InternalFormat::Cuboid(cs1), InternalFormat::Cuboid(cs2)) => cs1
             .iter()
             .any(|c1| cs2.iter().any(|c2| is_overlap_cuboids(c1, c2))),
     }
@@ -131,10 +154,10 @@ pub fn is_overlap(p1: &Program, p2: &Program) -> bool {
 pub fn cut_program_at_z(p: Program, z: i32) -> (Option<Program>, Option<Program>) {
     // TODO: remove .clone
     match p.format() {
-        ProgramFormat::Polycube(_poly) => {
+        InternalFormat::Polycube(_poly) => {
             unimplemented!() // currently unsupported
         }
-        ProgramFormat::Cuboid(cs) => {
+        InternalFormat::Cuboid(cs) => {
             let mut below = Vec::new();
             let mut above = Vec::new();
             for c in cs {
@@ -162,13 +185,13 @@ pub fn cut_program_at_z(p: Program, z: i32) -> (Option<Program>, Option<Program>
             let below = if below.is_empty() {
                 None
             } else {
-                let format = ProgramFormat::Cuboid(below);
+                let format = InternalFormat::Cuboid(below);
                 Some(Program::new(format))
             };
             let above = if above.is_empty() {
                 None
             } else {
-                let format = ProgramFormat::Cuboid(above);
+                let format = InternalFormat::Cuboid(above);
                 Some(Program::new(format))
             };
             (below, above)
@@ -178,14 +201,14 @@ pub fn cut_program_at_z(p: Program, z: i32) -> (Option<Program>, Option<Program>
 
 #[cfg(test)]
 pub mod test {
-    use crate::program::{cut_program_at_z, Coordinate, Cuboid, Program, ProgramFormat};
+    use crate::program::{cut_program_at_z, Coordinate, Cuboid, InternalFormat, Program};
 
     #[test]
     fn test_cut_program_at_z() {
         let c1 = Cuboid::new(Coordinate::new(0, 0, 0), 1, 1, 2);
         let c2 = Cuboid::new(Coordinate::new(0, 0, 2), 1, 1, 3);
         let c3 = Cuboid::new(Coordinate::new(0, 0, 5), 1, 1, 4);
-        let program = Program::new(ProgramFormat::Cuboid(vec![c1.clone(), c2, c3.clone()]));
+        let program = Program::new(InternalFormat::Cuboid(vec![c1.clone(), c2, c3.clone()]));
         let (below, above) = cut_program_at_z(program, 3);
         let below_cs = below.unwrap().cuboid().unwrap().clone();
         let above_cs = above.unwrap().cuboid().unwrap().clone();

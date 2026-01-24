@@ -1,5 +1,5 @@
 use crate::preprocess::Preprocessor;
-use crate::program::{Cuboid, Polycube, Program, ProgramFormat};
+use crate::program::{Cuboid, Polycube, Program, InternalFormat};
 
 pub struct ConvertToCuboid {
     num_cuboids: u32,
@@ -14,7 +14,7 @@ impl ConvertToCuboid {
 impl Preprocessor for ConvertToCuboid {
     fn process(&self, program: Program) -> Program {
         match program.format() {
-            ProgramFormat::Polycube(p) => {
+            InternalFormat::Polycube(p) => {
                 let min_z = p.min_z() as f32;
                 let z_len = (p.max_z() - p.min_z() + 1) as f32;
                 let mut poly_bins = vec![Polycube::new(Vec::new()); self.num_cuboids as usize];
@@ -28,9 +28,9 @@ impl Preprocessor for ConvertToCuboid {
                     .filter(|poly| poly.size() > 0)
                     .map(|poly| Cuboid::from(&poly))
                     .collect();
-                Program::new(ProgramFormat::Cuboid(cuboids))
+                Program::new(InternalFormat::Cuboid(cuboids))
             }
-            ProgramFormat::Cuboid(_) => program,
+            InternalFormat::Cuboid(_) => program,
         }
     }
 }
@@ -40,14 +40,14 @@ mod test {
     use super::ConvertToCuboid;
     use crate::{
         preprocess::Preprocessor,
-        program::{Coordinate, Polycube, Program, ProgramFormat},
+        program::{Coordinate, Polycube, Program, InternalFormat},
     };
 
     #[test]
     fn test_convert_to_cuboids() {
         let num_cuboids = 4;
         let blocks = (2..15).map(|z| Coordinate::new(0, 0, z)).collect();
-        let poly = Program::new(ProgramFormat::Polycube(Polycube::new(blocks)));
+        let poly = Program::new(InternalFormat::Polycube(Polycube::new(blocks)));
         let converter = ConvertToCuboid::new(num_cuboids);
         let cuboids = converter.process(poly).cuboid().unwrap().clone();
         assert!(cuboids.len() == num_cuboids as usize);

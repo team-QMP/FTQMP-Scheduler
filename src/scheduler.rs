@@ -8,7 +8,7 @@ pub use lp_scheduler::LPScheduler;
 
 use crate::environment::Environment;
 use crate::job::{Job, JobID};
-use crate::program::{Coordinate, Cuboid, Polycube, Program, ProgramFormat};
+use crate::program::{Coordinate, Cuboid, Polycube, Program, InternalFormat};
 
 use serde::{Deserialize, Serialize};
 
@@ -94,16 +94,16 @@ pub fn apply_schedule_to_cuboid(cuboid: &Cuboid, schedule: &Schedule) -> Cuboid 
 pub fn apply_schedule(program: &Program, schedule: &Schedule) -> Program {
     assert!(0 <= schedule.rotate && schedule.rotate < 4);
     match program.format() {
-        ProgramFormat::Polycube(polycube) => {
+        InternalFormat::Polycube(polycube) => {
             let scheduled = apply_schedule_to_polycube(polycube, schedule);
-            Program::new(ProgramFormat::Polycube(scheduled))
+            Program::new(InternalFormat::Polycube(scheduled))
         }
-        ProgramFormat::Cuboid(cuboids) => {
+        InternalFormat::Cuboid(cuboids) => {
             let cuboids = cuboids
                 .iter()
                 .map(|c| apply_schedule_to_cuboid(c, schedule))
                 .collect();
-            Program::new(ProgramFormat::Cuboid(cuboids))
+            Program::new(InternalFormat::Cuboid(cuboids))
         }
     }
 }
@@ -115,12 +115,12 @@ pub trait Scheduler {
 
 #[cfg(test)]
 mod test {
-    use crate::program::{Coordinate, Polycube, Program, ProgramFormat};
+    use crate::program::{Coordinate, Polycube, Program, InternalFormat};
     use crate::scheduler::{apply_schedule, Schedule};
 
     #[test]
     fn test_apply_schedule() {
-        let p = Program::new(ProgramFormat::Polycube(Polycube::new(vec![
+        let p = Program::new(InternalFormat::Polycube(Polycube::new(vec![
             Coordinate::new(2, 1, 0),
             Coordinate::new(1, 2, 0),
         ])));

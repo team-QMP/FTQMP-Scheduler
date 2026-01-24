@@ -3,7 +3,7 @@ use kiss3d::nalgebra::Translation3;
 use kiss3d::nalgebra::{UnitQuaternion, Vector3};
 use kiss3d::window::Window;
 
-use crate::program::{Polycube, Program, ProgramFormat};
+use crate::program::{Polycube, Program, InternalFormat};
 use crate::scheduler::Schedule;
 
 struct RandomColorGenerator {
@@ -57,7 +57,7 @@ pub fn render_program(programs: &[Program]) {
 
     for program in programs {
         match program.format() {
-            ProgramFormat::Polycube(p) => {
+            InternalFormat::Polycube(p) => {
                 let (r, g, b) = rng_color.gen();
                 for block in p.blocks() {
                     let mut c = window.add_cube(

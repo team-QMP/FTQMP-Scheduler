@@ -1,7 +1,7 @@
 use crate::config::SimulationConfig;
 use crate::environment::Environment;
 use crate::job::Job;
-use crate::program::{is_overlap, Coordinate, Program, ProgramFormat};
+use crate::program::{is_overlap, Coordinate, Program, InternalFormat};
 use crate::scheduler::{apply_schedule, JobID, Schedule, Scheduler};
 
 use std::collections::{HashSet, VecDeque};
@@ -38,7 +38,7 @@ impl CornerGreedyScheduler {
 
 fn create_location_candidate(p: &Program) -> Vec<Coordinate> {
     let (x1, x2, y1, y2, z1, z2) = match p.format() {
-        ProgramFormat::Polycube(p) => (
+        InternalFormat::Polycube(p) => (
             p.min_x(),
             p.max_x(),
             p.min_y(),
@@ -46,7 +46,7 @@ fn create_location_candidate(p: &Program) -> Vec<Coordinate> {
             p.min_z(),
             p.max_z(),
         ),
-        ProgramFormat::Cuboid(cs) => cs.iter().fold(
+        InternalFormat::Cuboid(cs) => cs.iter().fold(
             (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN),
             |(x1, x2, y1, y2, z1, z2), c| {
                 (

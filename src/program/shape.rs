@@ -126,7 +126,7 @@ impl Polycube {
         }
     }
 
-    pub fn blocks(&self) -> &Vec<Coordinate> {
+    pub fn blocks(&self) -> &[Coordinate] {
         &self.blocks
     }
 
@@ -177,8 +177,7 @@ impl Polycube {
     }
 
     pub fn print(&self) {
-        for i in 0..self.size() {
-            let coordinate = self.index_to_xyz(i);
+        for coordinate in &self.blocks {
             println!("({}, {}, {})", coordinate.x, coordinate.y, coordinate.z);
         }
     }
@@ -237,16 +236,138 @@ pub fn create_random_polycube(num_block: i32) -> Polycube {
     polycube
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Cuboid {
+    pos: Coordinate,
+    size_x: usize,
+    size_y: usize,
+    size_z: usize,
+    original: Option<Polycube>,
+}
+
+impl From<&Polycube> for Cuboid {
+    fn from(item: &Polycube) -> Self {
+        Self {
+            pos: Coordinate::new(0, 0, 0),
+            size_x: (item.max_x() - item.min_x() + 1) as usize,
+            size_y: (item.max_y() - item.min_y() + 1) as usize,
+            size_z: (item.max_z() - item.min_z() + 1) as usize,
+            //original: Some(item.clone()),
+            original: None,
+        }
+    }
+}
+
+impl Cuboid {
+    pub fn new(pos: Coordinate, size_x: usize, size_y: usize, size_z: usize) -> Self {
+        Cuboid {
+            pos,
+            size_x,
+            size_y,
+            size_z,
+            original: None,
+        }
+    }
+
+    pub fn pos(&self) -> &Coordinate {
+        &self.pos
+    }
+
+    pub fn x1(&self) -> i32 {
+        self.pos.x
+    }
+
+    pub fn x2(&self) -> i32 {
+        self.pos.x + (self.size_x as i32)
+    }
+
+    pub fn y1(&self) -> i32 {
+        self.pos.y
+    }
+
+    pub fn y2(&self) -> i32 {
+        self.pos.y + (self.size_y as i32)
+    }
+
+    pub fn z1(&self) -> i32 {
+        self.pos.z
+    }
+
+    pub fn z2(&self) -> i32 {
+        self.pos.z + (self.size_z as i32)
+    }
+
+    pub fn size_x(&self) -> usize {
+        self.size_x
+    }
+
+    pub fn size_y(&self) -> usize {
+        self.size_y
+    }
+
+    pub fn size_z(&self) -> usize {
+        self.size_z
+    }
+
+    pub fn update_x1(&mut self, x: i32) {
+        self.pos.x = x;
+    }
+
+    pub fn update_y1(&mut self, y: i32) {
+        self.pos.y = y;
+    }
+
+    pub fn original(&self) -> &Option<Polycube> {
+        &self.original
+    }
+}
+
+pub fn is_overlap_polycubes(p1: &Polycube, p2: &Polycube) -> bool {
+    p1.blocks()
+        .iter()
+        .any(|b1| p2.blocks().iter().any(|b2| b1 == b2))
+}
+
+pub fn is_overlap_cuboids(c1: &Cuboid, c2: &Cuboid) -> bool {
+    let is_overlap_x = !(c1.x2() <= c2.x1() || c2.x2() <= c1.x1());
+    let is_overlap_y = !(c1.y2() <= c2.y1() || c2.y2() <= c1.y1());
+    let is_overlap_z = !(c1.z2() <= c2.z1() || c2.z2() <= c1.z1());
+    is_overlap_x && is_overlap_y && is_overlap_z
+}
+
+pub fn is_overlap_polycube_cuboid(p: &Polycube, c: &Cuboid) -> bool {
+    p.blocks().iter().any(|b| {
+        let cp = c.pos();
+        cp.x <= b.x
+            && b.x < cp.x + c.size_x() as i32
+            && cp.y <= b.y
+            && b.y <= cp.y + c.size_y() as i32
+            && cp.z <= b.z
+            && b.z <= cp.z + c.size_z() as i32
+    })
+}
+
 #[cfg(test)]
 mod test {
-    use crate::program::{Coordinate, Polycube};
+    use super::{Coordinate, Cuboid, Polycube};
 
     #[test]
     fn test_polycube_new() {
         let p = Polycube::new(vec![Coordinate::new(0, 0, 0), Coordinate::new(0, 1, 0)]);
         assert_eq!(
             p.blocks(),
-            &vec![Coordinate::new(0, 0, 0), Coordinate::new(0, 1, 0)]
+            &[Coordinate::new(0, 0, 0), Coordinate::new(0, 1, 0)]
         );
+    }
+
+    #[test]
+    fn test_create_cuboid_from_polycube() {
+        let p = Polycube::new(vec![Coordinate::new(1, 2, 3), Coordinate::new(2, 0, 1)]);
+        let cuboid = Cuboid::from(&p);
+        assert_eq!(cuboid.pos, Coordinate::new(0, 0, 0));
+        assert_eq!(cuboid.size_x, 2);
+        assert_eq!(cuboid.size_y, 3);
+        assert_eq!(cuboid.size_z, 3);
+        assert_eq!(cuboid.original().clone(), None);
     }
 }
